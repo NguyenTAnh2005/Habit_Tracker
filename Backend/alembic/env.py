@@ -6,8 +6,8 @@ from dotenv import load_dotenv
 from alembic import context
 import sys
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-from database import Base
-import models  # đảm bảo tất cả các mô hình được nhập khẩu để mục tiêu siêu dữ liệu có thể truy cập được
+from app.database.db_connection import Base
+import app.database.models as models  # đảm bảo tất cả các mô hình được nhập khẩu để mục tiêu siêu dữ liệu có thể truy cập được
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
 
