@@ -1,5 +1,7 @@
 from fastapi import FastAPI
-from database import engine, Base
+from app.database import models, db_connection
+from app.schemas import schemas
+from app.database.db_connection import engine
 
 
 app = FastAPI()
