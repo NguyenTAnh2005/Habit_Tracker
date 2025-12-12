@@ -1,10 +1,15 @@
-fastapi 
+fastapi
 uvicorn
 sqlalchemy
 psycopg2-binary
 python-dotenv
-alembic 
-psycopg2
+alembic
 pydantic
 
-passlib[bcrypt]
+# Thư viện bảo mật
+passlib
+bcrypt==3.2.0
+
+# TV cho JWT 
+python-jose
+python-multipart

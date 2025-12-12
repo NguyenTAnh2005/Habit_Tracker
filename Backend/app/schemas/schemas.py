@@ -3,7 +3,7 @@ from typing import List, Optional
 from datetime import date, datetime
 from enum import Enum
 
-# SCHEMA CHO BẢNG ROLE - admin dùng để phân quyền
+#=============SCHEMA CHO BẢNG ROLE - admin dùng để phân quyền
 class RoleBase(BaseModel):
     name: str
     desc: Optional[str] = None # Không bắt buộc (mặc định là None)
@@ -17,34 +17,34 @@ class RoleResponse(RoleBase):
         from_attributes = True
 
 
-# SCHEMA CHO BẢNG USER
-# 1. BASE: Chứa điểm chung (Tên, Email...)
+#=============SCHEMA CHO BẢNG USER
 class UserBase(BaseModel):
     username: str
     email: str
     full_name: str
-    # role_id cũng nên ở đây nếu lúc tạo và lúc xem đều cần
-    # Tuy nhiên, thường user đăng ký sẽ mặc định role là Member
-    # Nhưng theo Model của bạn là nullable=False, nên ta để Frontend gửi lên
-    role_id: int 
 
-# 2. CREATE: Dùng để Frontend gửi dữ liệu Đăng Ký
-# Kế thừa Base + thêm Password
-class UserCreate(UserBase):
+# Người dùng đăng ký (ko cho chọn quyền)
+class UserRegister(UserBase):
     password: str 
 
-# 3. RESPONSE: Dùng để Server trả về thông tin (Profile)
-# Kế thừa Base + thêm ID, Ngày tạo
-# TUYỆT ĐỐI KHÔNG CÓ PASSWORD Ở ĐÂY
-class UserResponse(UserBase):
-    id: int
-    created_at: datetime
+# Admin tạo => cho phép chọn quyền 
+class UserCreatedByAdmin(UserBase):
+    password: str
+    role_id: int
 
+# RESPONSE: Dùng để Server trả về thông tin (Profile)
+class UserResponse(BaseModel):
+    id: int              # Muốn hiện ID
+    username: str        # Muốn hiện username
+    email: str           # Muốn hiện email
+    full_name: str       # Muốn hiện tên đầy đủ
+    role_id: int
+
+    # Cấu hình để Pydantic đọc được dữ liệu từ SQLAlchemy (Object)
     class Config:
         from_attributes = True
-
-            
-# SCHEMA CHO BẢNG HABIT CATEGORY
+     
+#===============SCHEMA CHO BẢNG HABIT CATEGORY
 class HabitCategoryBase(BaseModel):
     name: str
     desc: Optional[str] = None
@@ -58,18 +58,27 @@ class HabitCategoryResponse(HabitCategoryBase):
         from_attributes = True
 
 
-# SCHEMA CHO BẢNG HABIT
+#====================SCHEMA CHO BẢNG HABIT
 class HabitBase(BaseModel):
     category_id: int
     name: str
     desc: Optional[str] = None
-    frequency: List[float]  # Mảng số nguyên lưu thứ trong tuần
+    frequency: List[int]  # Mảng số nguyên lưu thứ trong tuần
     unit: Optional[str] = None         # VD: km, trang, ly
     target_value: Optional[float] = None  # VD: 1,2,3
     color: Optional[str] = None        # VD: #FF5733
     
 class HabitCreate(HabitBase):
     pass
+
+class HabitUpdate(BaseModel):
+    category_id: Optional[int] = None
+    name: Optional[str] = None
+    desc: Optional[str] = None
+    frequency: Optional[List[int]] = None
+    unit: Optional[str] = None
+    target_value: Optional[float] = None
+    color: Optional[str] = None
 
 class HabitResponse(HabitBase):
     id: int
@@ -79,14 +88,14 @@ class HabitResponse(HabitBase):
     class Config:
         from_attributes = True
 
-# Định nghĩa Enum cho trạng thái HabitLog
+#===============---- Định nghĩa Enum cho trạng thái HabitLog
 class HabitLogStatus(str, Enum):
     COMPLETED = "COMPLETED"
     SKIPPED = "SKIPPED"
     FAILED = "FAILED"
     PARTIAL = "PARTIAL"
 
-#SHEMA CHO BẢNG HABIT LOG
+#================== SHEMA CHO BẢNG HABIT LOG
 class HabitLogBase(BaseModel):
     habit_id: int
     record_date: date
@@ -103,7 +112,7 @@ class HabitLogResponse(HabitLogBase):
         from_attributes = True
 
 
-# SCHEMA CHO BẢNG MOTIVATION_QUOTE
+# ====================== SCHEMA CHO BẢNG MOTIVATION_QUOTE
 class MotivationQuoteBase(BaseModel):
         quote: str
         author: Optional[str] = None
@@ -117,7 +126,7 @@ class MotivationQuoteResponse(MotivationQuoteBase):
         from_attributes = True
 
 
-# SCHEMA CHO BẢNG TOKEN
+#=============================== SCHEMA CHO BẢNG TOKEN
 # Schema này dùng để trả về cho Frontend ngay sau khi Login thành công
 class Token(BaseModel):
     access_token: str
@@ -126,3 +135,4 @@ class Token(BaseModel):
 # Schema này dùng để giải mã token (khi frontend gửi token lên để lấy dữ liệu)
 class TokenData(BaseModel):
     user_id: Optional[int] = None
+
