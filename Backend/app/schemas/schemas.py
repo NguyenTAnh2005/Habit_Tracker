@@ -11,6 +11,10 @@ class RoleBase(BaseModel):
 class RoleCreate(RoleBase):
     pass
 
+class RoleUpdate(BaseModel):
+    name: Optional[str] = None
+    desc: Optional[str] = None
+
 class RoleResponse(RoleBase):
     id: int
     class Config:
@@ -57,6 +61,9 @@ class HabitCategoryResponse(HabitCategoryBase):
     class Config:
         from_attributes = True
 
+class HabitCategoryUpdate(BaseModel):
+    name: Optional[str] = None
+    desc: Optional[str] = None
 
 #====================SCHEMA CHO BẢNG HABIT
 class HabitBase(BaseModel):
@@ -105,20 +112,49 @@ class HabitLogBase(BaseModel):
 class HabitLogCreate(HabitLogBase):
     pass
 
+class HabitLogUpdate(BaseModel):
+    habit_id: Optional[int] = None
+    record_date: Optional[date] = None
+    status: Optional[HabitLogStatus] = None
+    value: Optional[float] = None
+
 class HabitLogResponse(HabitLogBase):
     id: int
     created_at: datetime
     class Config:
         from_attributes = True
 
+# Schema cho User xem list log của mình (Kèm tên Habit)
+class HabitLogUserResponse(HabitLogResponse): 
+    habit_name: str # Thêm trường này để hiển thị tên thói quen
+
+    class Config:
+        from_attributes = True
+
+# Schema HabitLog chi tiết cho Admin (hiển thị thêm tên habit và tên user)
+class HabitLogAdminResponse(BaseModel):
+    id: int
+    record_date: date
+    status: HabitLogStatus
+    value: Optional[float] = None
+    
+    habit_name: str       
+    user_full_name: str   
+
+    class Config:
+        from_attributes = True
 
 # ====================== SCHEMA CHO BẢNG MOTIVATION_QUOTE
 class MotivationQuoteBase(BaseModel):
-        quote: str
-        author: Optional[str] = None
+    quote: str
+    author: Optional[str] = None
 
 class MotivationQuoteCreate(MotivationQuoteBase):
     pass
+
+class MotivationQuoteUpdate(BaseModel):
+    quote: Optional[str] = None
+    author: Optional[str] = None
 
 class MotivationQuoteResponse(MotivationQuoteBase):
     id: int
@@ -135,4 +171,3 @@ class Token(BaseModel):
 # Schema này dùng để giải mã token (khi frontend gửi token lên để lấy dữ liệu)
 class TokenData(BaseModel):
     user_id: Optional[int] = None
-
