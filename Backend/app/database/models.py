@@ -94,7 +94,7 @@ class HabitLog(Base):
     habit = relationship("Habit", back_populates="habit_logs")
 
 # --- BẢNG MOTIVATIONAL QUOTE (Đã sửa tên Class) ---
-class MotivationalQuote(Base):
+class MotivationQuote(Base):
     __tablename__ = "motivational_quotes"
 
     id = Column(Integer, primary_key=True, index=True)
