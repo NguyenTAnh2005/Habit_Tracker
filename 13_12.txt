@@ -1,0 +1,13 @@
+JWT 
+
+Tạo ham tạo Token trong file utils
+tạo file dependencies để giải mã jwt Token và lấy user id
+chỉnh sửa các API gắn thêm user id của JWWT đầu tiên là habit và hbit log
+
+Sau đó chỉnh khóa các API với vc thêm dependencies và bổ sung phần curent_user trong tham số đầu vào 
+
+
+Thêm hàm check admin trong dependencies, sau đó chỉnh lại khóa trong api 
+
+
+
