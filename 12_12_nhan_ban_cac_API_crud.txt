@@ -1,0 +1,12 @@
+NHÂN BẢN CODE CÁC FILE CRUD, ROUTER => TẠO API END POINT QUA ĐÓ CHẮC CHẮN HƠN VỀ SCHEMA 
+
+chỉnh sửa cấu trúc: 
+tạo thư mục crud trong database và chứa các file crud, sau đó chỉnh lại các import đường dẫn sao cho đúng
+chỉnh sửa schema cho phép có schema update (có cũng đc, ko có trường đó cũng ko sao )
+CỤ thể: 
+file trong router sửa đoạn =====>  from app.database.crud import crud_habit
+
+Đầu tiên cho file Habit Category (schema phần cattegory, crud_category,categories.py)
+Bảng role
+Bảng motivation Quote
+Bảng Habit logs

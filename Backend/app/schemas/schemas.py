@@ -171,3 +171,8 @@ class Token(BaseModel):
 # Schema này dùng để giải mã token (khi frontend gửi token lên để lấy dữ liệu)
 class TokenData(BaseModel):
     user_id: Optional[int] = None
+
+# Schema dùng cho Input đầu vào của API Login (JSON)
+# class UserLogin(BaseModel):
+#     email: str
+#     password: str

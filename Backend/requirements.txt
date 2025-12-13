@@ -5,11 +5,11 @@ psycopg2-binary
 python-dotenv
 alembic
 pydantic
+python-multipart 
 
 # Thư viện bảo mật
 passlib
-bcrypt==3.2.0
+bcrypt ==3.2.0
 
 # TV cho JWT 
-python-jose
-python-multipart
+python-jose[cryptography] 
