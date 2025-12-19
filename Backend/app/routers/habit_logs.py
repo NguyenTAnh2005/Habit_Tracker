@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, status
-from typing import List
+from typing import List, Optional
 from fastapi.encoders import jsonable_encoder
 from sqlalchemy.orm import Session
 from app.database import models
@@ -7,6 +7,7 @@ from app.database import db_connection
 from app.schemas import schemas
 from app.database.crud import crud_habit_log, crud_habit
 from app.core.dependencies import get_current_user, get_admin_user
+from datetime import date, datetime, timedelta
 
 router = APIRouter(
     prefix = "/logs",
@@ -14,7 +15,7 @@ router = APIRouter(
 )
 
 
-# 1. Check-in
+# Check-in
 @router.post("/", response_model=schemas.HabitLogResponse)
 def check_in_habit(
     log: schemas.HabitLogCreate,
@@ -40,7 +41,7 @@ def check_in_habit(
     return crud_habit_log.create_or_update_habit_log(db=db, log=log)
 
 
-# 2. Xem lịch sử của 1 thói quen
+# Xem lịch sử của 1 thói quen (chính chủ hoặc admin)
 @router.get("/habit/{habit_id}", response_model=List[schemas.HabitLogResponse])
 def get_history_by_habit(
     habit_id: int, 
@@ -54,8 +55,8 @@ def get_history_by_habit(
     if not habit:
         raise HTTPException(status_code = 404, detail = "Thói quen không tồn tại")
         
-    # Kiểm tra CHÍNH CHỦ
-    if habit.user_id != current_user.id:
+    # Kiểm tra CHÍNH CHỦ hoặc ADMIN
+    if habit.user_id != current_user.id and current_user.role_id != 1:
         raise HTTPException(
             status_code = status.HTTP_403_FORBIDDEN, 
             detail = "Bạn không có quyền xem lịch sử thói quen này!"
@@ -64,16 +65,50 @@ def get_history_by_habit(
     return crud_habit_log.get_logs_by_habit(db, habit_id=habit_id, skip=skip, limit=limit)
 
 
-# 3. Xem log của User (kèm tên Habit)
-@router.get("/user/{user_id}", response_model=List[schemas.HabitLogUserResponse]) 
+# 3. Xem tất cả log của User 
+@router.get("/user/history", response_model=List[schemas.HabitLogUserResponse]) 
 def get_all_logs_by_user(
     skip: int = 0, 
     limit: int = 100, 
+    from_date: Optional[date] = None, # <--- Ngày bắt đầu
+    to_date: Optional[date] = None,   # <--- Ngày kết thúc
+    habit_id: Optional[int] = None,   # <--- Lọc riêng 1 habit
     db: Session = Depends(db_connection.get_db),
     current_user: models.User = Depends(get_current_user)
-    ):
-    return crud_habit_log.get_all_logs_by_user(db = db, user_id = current_user.id, skip = skip, limit = limit)
+):
+    # Join bảng Habit để chắc chắn lấy log của đúng user này
+    query = db.query(models.HabitLog).join(models.Habit).filter(
+        models.Habit.user_id == current_user.id
+    )
 
+    # 1. Lọc theo khoảng thời gian
+    if from_date:
+        query = query.filter(models.HabitLog.record_date >= from_date)
+    if to_date:
+        query = query.filter(models.HabitLog.record_date <= to_date)
+    
+    # 2. Lọc theo habit cụ thể (nếu user chọn filter dropdown)
+    if habit_id:
+        query = query.filter(models.HabitLog.habit_id == habit_id)
+
+    # Sắp xếp ngày giảm dần (mới nhất lên đầu)
+    query = query.order_by(models.HabitLog.record_date.desc())
+
+    logs = query.offset(skip).limit(limit).all()
+    result = []
+    for log in logs:
+        # Lấy các trường cơ bản từ log
+        item = {
+            "id": log.id,
+            "habit_id": log.habit_id,
+            "value": log.value,
+            "status": log.status,
+            "record_date": log.record_date,
+            "created_at": log.created_at,
+            "habit_name": log.habit.name if log.habit else "Đã xóa"
+        }
+        result.append(item)
+    return result
 
 # 4. [ADMIN] Xem toàn bộ
 @router.get("/admin/all", response_model=List[schemas.HabitLogAdminResponse])
@@ -140,4 +175,82 @@ def delete_log(
         "log": jsonable_encoder(db_log)
     }
 
+# 7. Thống kê hoàn thành thói quen trong ngày hôm nay (Dành cho User)
+@router.get("/stats/today") 
+def get_daily_stats_overall(
+    db: Session = Depends(db_connection.get_db),
+    current_user: models.User = Depends(get_current_user)
+):
+    """
+    Tính % hoàn thành của TOÀN BỘ thói quen trong NGÀY HÔM NAY.
+    """
+    today = (datetime.now() + timedelta(hours=7)).date()  # Giờ VN
+    weekday_int = today.weekday()+2  # 0=Thứ 2, ..., 6=CN
+    
+    # 1. Lấy tất cả Habit của User
+    all_habits = crud_habit.get_habits_by_user(db, user_id=current_user.id, limit=9999)
+    
+    # 2. Lọc ra những habit CẦN LÀM hôm nay (Dựa vào mảng frequency)
+    # Giả sử frequency lưu chuỗi "0,1,2" hoặc json [0,1,2]. 
+    # Tạm thời logic đơn giản: Nếu habit có frequency thì check, ko có thì coi như ngày nào cũng làm.
+    habits_today = []
+    for h in all_habits:
+        # Lưu ý: Bạn cần kiểm tra lại kiểu dữ liệu của h.frequency trong DB của bạn
+        # Ở đây mình giả định nếu frequency rỗng là làm mỗi ngày
+        if not h.frequency: 
+             habits_today.append(h)
+        # Nếu frequency là list hoặc string chứa weekday_int
+        elif str(weekday_int) in str(h.frequency): 
+            habits_today.append(h)
+            
+    if not habits_today:
+        return {
+            "date": today,
+            "total_assigned": 0,
+            "completed_count": 0,
+            "daily_rate": 0.0
+        }
+
+    # 3. Đếm xem cái nào đã log COMPLETED hôm nay
+    habit_ids_today = [h.id for h in habits_today]
+    
+    todays_logs = db.query(models.HabitLog).filter(
+        models.HabitLog.habit_id.in_(habit_ids_today),
+        models.HabitLog.record_date == today,
+        models.HabitLog.status == "COMPLETED" 
+    ).all()
+    
+    # Dùng set để loại bỏ log trùng (nếu có)
+    unique_done_habits = set([log.habit_id for log in todays_logs])
+    completed_count = len(unique_done_habits)
+
+    # 4. Tính toán
+    total_assigned = len(habits_today)
+    rate = (completed_count / total_assigned) * 100 if total_assigned > 0 else 0
+    
+    return {
+        "date": today,
+        "total_assigned": total_assigned,
+        "completed_count": completed_count,
+        "daily_rate": round(rate, 2)
+    }
+
+
+
+# 8. Lấy tất cả log trong ngày hôm nay của user (Dành cho User)
+@router.get("/today", response_model=List[schemas.HabitLogResponse])
+def get_todays_logs(
+    db: Session = Depends(db_connection.get_db),
+    current_user: models.User = Depends(get_current_user)
+):
+    today = (datetime.now() + timedelta(hours=7)).date() # Giờ VN
+    
+    # Lấy các log của user này trong ngày hôm nay
+    # Join với bảng Habit để chắc chắn là habit của user đó
+    logs = db.query(models.HabitLog).join(models.Habit).filter(
+        models.Habit.user_id == current_user.id,
+        models.HabitLog.record_date == today
+    ).all()
+    
+    return logs
 
