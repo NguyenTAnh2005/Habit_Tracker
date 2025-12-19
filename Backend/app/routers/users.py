@@ -109,6 +109,18 @@ def update_user_me(
         if existing_email and existing_email.id != current_user.id:
             raise HTTPException(status_code=400, detail="Email này đã được sử dụng!")
         current_user.email = user_update.email
+    
+    if user_update.username:
+        # Nếu đổi username, cần check xem username mới có trùng ai ko
+        existing_user = crud_user.get_user_by_username(db, username=user_update.username)
+        if existing_user and existing_user.id != current_user.id:
+            raise HTTPException(status_code=400, detail="Username này đã tồn tại!")
+        current_user.username = user_update.username
+
+    if user_update.password:
+        # Hash lại mật khẩu
+        hashed_password = get_password_hash(user_update.password)
+        current_user.password = hashed_password
 
     db.commit()
     db.refresh(current_user)

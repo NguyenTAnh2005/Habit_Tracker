@@ -1,3 +1,4 @@
+import axios from 'axios';
 import axiosClient from './axiosClient';
 
 const userApi = {
@@ -6,11 +7,9 @@ const userApi = {
     const url = '/users/me';
     return axiosClient.put(url, data);
   },
-
-  // Đổi mật khẩu (Tính năng mở rộng sau này)
-  changePassword(data) {
-    const url = '/users/change-password';
-    return axiosClient.put(url, data);
+  // Xác thực mật khẩu hiện tại
+  verifyPassword(password){
+    return axiosClient.post('/users/verify-password', {password: password});
   },
   //[ADMIN] Lấy danh sách user (có tìm kiếm, phân trang)
   getAllUsers(params) {
