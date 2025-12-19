@@ -1,0 +1,121 @@
+JWT 
+
+Tạo ham tạo Token trong file utils
+tạo file dependencies để giải mã jwt Token và lấy user id
+chỉnh sửa các API gắn thêm user id của JWWT đầu tiên là habit và hbit log
+
+Sau đó chỉnh khóa các API với vc thêm dependencies và bổ sung phần curent_user trong tham số đầu vào 
+
+
+Thêm hàm check admin trong dependencies, sau đó chỉnh lại khóa trong api 
+
+
+// Cập nhật Habit cho phép đọc hết habit từ Admin, admin cũng được xem và chỉnh sửa hoặc xóa. 
+
+// Viết code logic tính chuỗi streak + tỉ lệ hoàn thành trong 30 ngày gần nhất
+
+// CHỉnh schema
+
+// Logic khó quá, qua front end tí 
+cài tailwind vào 
+npm install -D tailwindcss@3 postcss autoprefixer
+npm install -D tailwindcss@3 postcss autoprefixer
+
+
+cấu hình file tailwind config 
+/** @type {import('tailwindcss').Config} */
+export default {
+  content: [
+    "./index.html",
+    "./src/**/*.{js,ts,jsx,tsx}", # <--- Quan trọng: Dòng này giúp Tailwind quét file React
+  ],
+  theme: {
+    extend: {
+      // Sau này muốn thêm màu riêng thì thêm ở đây
+      colors: {
+        primary: "#4F46E5", 
+      }
+    },
+  },
+  plugins: [],
+}
+
+
+# axios: Gọi API Backend
+# react-router-dom: Chuyển trang (Login -> Dashboard)
+# react-toastify: Hiện thông báo đẹp (như "Đăng nhập thành công")
+# lucide-react: Bộ icon siêu đẹp, nhẹ hơn FontAwesome
+# clsx tailwind-merge: Hỗ trợ gộp class Tailwind (dành cho pro)
+
+npm install axios react-router-dom react-toastify lucide-react clsx tailwind-merge
+
+cấu hình thư mục front 
+src/
+├── api/            # Chứa file cấu hình Axios (axiosClient.js)
+├── assets/         # Ảnh, font
+├── components/     # Các nút bấm, input, sidebar dùng chung
+├── contexts/       # Quản lý đăng nhập (AuthContext)
+├── layouts/        # Bố cục trang (VD: Layout có Sidebar, Layout trống cho Login)
+├── pages/          # Các màn hình chính (LoginPage, Dashboard, HabitPage)
+├── router.jsx      # Cấu hình đường dẫn
+├── App.jsx         # File gốc
+└── main.jsx        # File render
+
+Trong React, chúng ta không nên gọi axios.get(...) trần trụi ở khắp nơi. Thay vào đó, ta sẽ tạo một "Cổng trung chuyển" (Axios Instance). Cổng này có nhiệm vụ:
+
+Tự động điền http://localhost:8000 vào đầu mỗi link.
+
+Quan trọng nhất: Tự động móc cái thẻ bài Token từ túi (LocalStorage) gắn vào Header mỗi khi gọi API. (Cực kỳ cần thiết cho mấy API bảo mật bạn vừa viết).
+
+Bạn làm theo các bước sau nhé:
+
+Bước 1: Tạo file cấu hình Axios
+Bạn tạo file mới tại đường dẫn: src/api/axiosClient.js và dán đoạn code sau vào:
+Để code gọn gàng, ta sẽ gom các hàm gọi API liên quan đến User vào một file riêng. Bạn tạo file:
+src/api/authApi.js
+
+
+cài corc bên backend, tải thư viện pydantic setting để quản lý các host được cho phép 
+pip install pydantic-settings
+
+tạo file cấu hình config trong thư mục core của backend 
+
+chỉnh biến môi trường có biến cổng FE đang chạy 
+
+chỉnh biến môi truowngd chứa seceret key và thuật toán hash
+
+Bước tiếp theo quan trọng nhất là làm cái Khung Sườn (Layout). Một App xịn thường có:
+
+Sidebar (Menu bên trái): Để chuyển qua lại giữa các trang (Dashboard, Quản lý Thói quen, Thống kê...).
+
+Content Area (Khu vực chính): Nơi hiển thị nội dung thay đổi.
+
+
+Bước 1: Tạo Component Sidebar (src/components/Sidebar.jsx)
+
+Bước 2: Tạo Layout Chính (src/layouts/MainLayout.jsx)
+File này sẽ đóng vai trò là cái "khung tranh", nó giữ Sidebar cố định bên trái và chỉ thay đổi nội dung ở giữa.
+
+Tạo file src/layouts/MainLayout.jsx:
+
+chỉnh file app jssx 
+
+Làm đẹp dashboard 
+
+
+Viết các file chứa hàm gọi API 
+
+src/api/habitApi.js
+
+Viết hàm lấy thông tin User (src/api/authApi.js)
+
+chỉnh lại dashboard 
+Thêm hàm tạo API (src/api/habitApi.js)
+tạo src/components/CreateHabitModal.jsx
+
+
+
+
+
+
+
