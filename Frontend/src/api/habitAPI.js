@@ -1,69 +1,91 @@
 import axiosClient from './axiosClient';
 
 const habitApi = {
-  // 1. Lấy danh sách thói quen (Có hỗ trợ params search, category_id)
+  // ============================================================
+  // 1. QUẢN LÝ THÓI QUEN (HABITS CRUD)
+  // ============================================================
+
+  // Lấy tất cả thói quen (hỗ trợ filter: search, category_id) - Dùng cho trang Quản lý
   getAllHabits(params) {
     return axiosClient.get('/habits', { params });
   },
 
-  // 2. Lấy danh sách thói quen CẦN LÀM HÔM NAY (API Mới)
-  getHabitsToday() {
-    return axiosClient.get('/habits/today');
+  // Lấy danh sách thói quen CẦN LÀM theo ngày cụ thể (date_str) - Dùng cho Dashboard
+  getHabitsByDate(dateStr) {
+    return axiosClient.get('/habits/today', { params: { date_str: dateStr } });
   },
 
-  // 3. Lấy thống kê ngày
-  getDailyStats() {
-    return axiosClient.get('/logs/stats/today');
-  },
-
-  // 4. Check-in
-  checkIn(data) {
-    return axiosClient.post('/logs/', data);
-  },
-
-  // 5. Tạo mới
-  createHabit(data){
+  // Tạo thói quen mới
+  createHabit(data) {
     return axiosClient.post('/habits/create', data);
   },
 
-  // 6. Lấy danh mục
-  getCategories() {
-    return axiosClient.get('/categories');
-  },
-
-  // 7. Lấy log hôm nay
-  getTodaysLogs() {
-    return axiosClient.get('/logs/today');
-  },
-
-  // 8. Cập nhật
+  // Cập nhật thông tin thói quen
   updateHabit(id, data) {
     return axiosClient.put(`/habits/update/${id}`, data);
   },
 
-  // 9. Xóa thói quen
+  // Xóa thói quen
   deleteHabit(id) {
     return axiosClient.delete(`/habits/delete/${id}`);
   },
 
-  // 10. Xóa Log (Undo check-in)
+  // Lấy danh sách danh mục (Category)
+  getCategories() {
+    return axiosClient.get('/categories');
+  },
+
+  // ============================================================
+  // 2. QUẢN LÝ NHẬT KÝ & CHECK-IN (LOGS)
+  // ============================================================
+
+  // Lấy danh sách Log đã check-in theo ngày cụ thể (date_str)
+  getLogsByDate(dateStr) {
+    return axiosClient.get('/logs/today', { params: { date_str: dateStr } });
+  },
+
+  // Tạo mới Check-in
+  checkIn(data) {
+    return axiosClient.post('/logs/', data);
+  },
+
+  // Cập nhật Log (Sửa lại kết quả/trạng thái của log cũ)
+  updateLog(logId, data) {
+    return axiosClient.put(`/logs/update/${logId}`, data);
+  },
+
+  // Xóa Log (Undo check-in)
   deleteLog(logId) {
     return axiosClient.delete(`/logs/${logId}`);
   },
 
-  // 11. Lấy lịch sử
+  // Lấy lịch sử log của MỘT thói quen cụ thể (kèm phân trang, lọc ngày)
+  getHabitLogs(habitId, params) {
+    // params: { skip, limit, from_date, to_date }
+    return axiosClient.get(`/logs/habit/${habitId}`, { params });
+  },
+
+  // Lấy lịch sử log tổng quát của User (cho trang Stats hoặc History chung)
   getHistory(params) {
     return axiosClient.get('/logs/user/history', { params });
   },
-  // 12. Lấy chỉ số Streak các Habit 
-  // 👇 THÊM HÀM NÀY: Lấy thống kê (Streak) của 1 habit
+
+  // ============================================================
+  // 3. THỐNG KÊ (STATS)
+  // ============================================================
+
+  // Lấy thống kê % hoàn thành theo ngày (date_str)
+  getDailyStats(dateStr) {
+    return axiosClient.get('/logs/stats/today', { params: { date_str: dateStr } });
+  },
+
+  // Lấy chỉ số Streak hiện tại của 1 habit
   getHabitStreak(habitId) {
     return axiosClient.get(`/habits/${habitId}/streaks`);
   },
-  // 13.  Lấy lịch sử chi tiết của 1 habit (kèm filter date)
-  getHabitLogs(habitId, params) {
-    // params bao gồm: { skip, limit, from_date, to_date }
-    return axiosClient.get(`/logs/habit/${habitId}`, { params });
+  // Đồng bộ tự động các habit chưa check-in thành FAIL trong quá khứ
+  syncAutoFail(dateStr) {
+    return axiosClient.post('/logs/auto-fail', null, { params: { date_str: dateStr } });
   },
 };
 

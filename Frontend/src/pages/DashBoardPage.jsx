@@ -1,256 +1,236 @@
 import { useEffect, useState } from 'react';
-import { Activity, CheckCircle, Plus, Calendar, Pencil, Trash2, Search } from 'lucide-react';
+import { Activity, CheckCircle, Calendar, Search, PieChart, FastForward, AlertCircle, ChevronLeft, ChevronRight, RotateCcw } from 'lucide-react';
 import habitApi from '../api/habitAPI';
 import authApi from '../api/authApi';
-import CreateHabitModal from '../components/CreateHabitModal';
 import CheckInModal from '../components/CheckInModal';
 
 const DashboardPage = () => {
   const [user, setUser] = useState(null);
   const [dailyStats, setDailyStats] = useState(null);
   
-  // State quản lý danh sách thói quen
-  const [habits, setHabits] = useState([]); // Danh sách đang hiển thị (có thể đã bị lọc)
-  const [allHabitsToday, setAllHabitsToday] = useState([]); // Danh sách gốc của ngày hôm nay
-  
+  // State Ngày (Mặc định hôm nay)
+  const getTodayString = () => {
+    const d = new Date();
+    const offset = d.getTimezoneOffset() * 60000;
+    return (new Date(d - offset)).toISOString().slice(0, 10);
+  };
+  const [selectedDate, setSelectedDate] = useState(getTodayString());
+
+  const [habits, setHabits] = useState([]); 
+  const [allHabitsToday, setAllHabitsToday] = useState([]); 
   const [logsToday, setLogsToday] = useState([]); 
+  const [categories, setCategories] = useState([]);
+  
   const [loading, setLoading] = useState(true);
-
-  // State tìm kiếm
   const [searchTerm, setSearchTerm] = useState('');
+  const [typingTimeout, setTypingTimeout] = useState(null);
 
-  // Modal states
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [editingHabit, setEditingHabit] = useState(null);
+  // Modal Check-in
   const [checkInHabit, setCheckInHabit] = useState(null); 
+  const [logToEdit, setLogToEdit] = useState(null); // Để sửa log ngay tại dashboard
   const [isCheckInModalOpen, setIsCheckInModalOpen] = useState(false);
 
   // --- HÀM LOAD DỮ LIỆU ---
-  const fetchDashboardData = async () => {
+  const fetchDashboardData = async (search = '', dateStr = selectedDate) => {
     try {
-      // 1. Gọi API lấy dữ liệu song song
-      const [statsData, habitsTodayData, logsData] = await Promise.all([
-        habitApi.getDailyStats(),
-        habitApi.getHabitsToday(), // <--- DÙNG API MỚI (chỉ lấy việc hôm nay)
-        habitApi.getTodaysLogs()
+      const [statsData, habitsData, logsData, catsData] = await Promise.all([
+        habitApi.getDailyStats(dateStr),
+        habitApi.getHabitsByDate(dateStr),
+        habitApi.getLogsByDate(dateStr),
+        habitApi.getCategories() 
       ]);
 
       setDailyStats(statsData);
       setLogsToday(logsData);
-      
-      // 2. Lưu danh sách gốc
-      setAllHabitsToday(habitsTodayData);
+      setAllHabitsToday(habitsData);
+      setCategories(catsData);
 
-      // 3. Nếu đang có từ khóa tìm kiếm -> Lọc luôn trên client
-      if (searchTerm) {
-        const filtered = habitsTodayData.filter(h => 
-            h.name.toLowerCase().includes(searchTerm.toLowerCase())
-        );
-        setHabits(filtered);
-      } else {
-        setHabits(habitsTodayData);
+      let filtered = habitsData;
+      if (search || searchTerm) {
+        const term = search || searchTerm;
+        filtered = habitsData.filter(h => h.name.toLowerCase().includes(term.toLowerCase()));
       }
-
+      setHabits(filtered);
     } catch (error) {
       console.error("Lỗi load data:", error);
     }
   };
 
-  // --- XỬ LÝ TÌM KIẾM (CLIENT SIDE) ---
   const handleSearchChange = (e) => {
     const keyword = e.target.value;
     setSearchTerm(keyword);
-
-    if (!keyword) {
-        // Nếu xóa trắng ô tìm kiếm -> Hiện lại toàn bộ
-        setHabits(allHabitsToday);
-    } else {
-        // Lọc trên danh sách gốc
-        const filtered = allHabitsToday.filter(h => 
-            h.name.toLowerCase().includes(keyword.toLowerCase())
-        );
-        setHabits(filtered);
-    }
+    if (typingTimeout) clearTimeout(typingTimeout);
+    setTypingTimeout(setTimeout(() => {
+        if (!keyword) setHabits(allHabitsToday);
+        else setHabits(allHabitsToday.filter(h => h.name.toLowerCase().includes(keyword.toLowerCase())));
+    }, 300));
   };
 
-  // Load lần đầu khi vào trang
+  // Sync Failed & Load Data
   useEffect(() => {
     const initData = async () => {
-      setLoading(true);
-      try {
-        const userData = await authApi.getMe();
-        setUser(userData);
-        await fetchDashboardData();
-      } catch (error) {
-        console.error(error);
-      } finally {
-        setLoading(false);
+      if(!user) {
+          try { const u = await authApi.getMe(); setUser(u); } catch(e){}
       }
+      setLoading(true);
+
+      // Lazy Sync chỉ chạy khi ở ngày hôm nay
+      if (selectedDate === getTodayString()) {
+          try { await habitApi.syncAutoFail(selectedDate); } catch (err) { console.warn(err); }
+      }
+
+      await fetchDashboardData(searchTerm, selectedDate);
+      setLoading(false);
     };
     initData();
-  }, []);
+  }, [selectedDate]);
 
-  // --- CÁC HÀM SỰ KIỆN ---
+  const handlePrevDay = () => {
+    const d = new Date(selectedDate);
+    d.setDate(d.getDate() - 1);
+    setSelectedDate(d.toISOString().slice(0, 10));
+  };
+  const handleNextDay = () => {
+    const d = new Date(selectedDate);
+    d.setDate(d.getDate() + 1);
+    setSelectedDate(d.toISOString().slice(0, 10));
+  };
 
-  const handleCheckInClick = async (habit) => {
+  // --- XỬ LÝ CLICK CARD ---
+  const handleCardClick = (habit) => {
     const existingLog = logsToday.find(log => log.habit_id === habit.id);
-
-    // UNDO CHECK-IN
+    
+    setCheckInHabit(habit);
+    
     if (existingLog) {
-      if (window.confirm(`Bạn muốn hủy check-in "${habit.name}"?`)) {
-        try {
-          await habitApi.deleteLog(existingLog.id); 
-          await fetchDashboardData(); 
-        } catch (error) {
-          alert("Hủy thất bại!");
-        }
-      }
-      return; 
-    }
-
-    // CHECK-IN (Định lượng hoặc Cơ bản)
-    if (habit.target_value && habit.target_value > 0) {
-      setCheckInHabit(habit);
-      setIsCheckInModalOpen(true);
+      // Nếu đã làm -> Mở modal chế độ SỬA
+      setLogToEdit(existingLog);
     } else {
+      // Nếu chưa làm -> Mở modal chế độ TẠO MỚI
+      setLogToEdit(null);
+    }
+    setIsCheckInModalOpen(true);
+  };
+
+  // --- XỬ LÝ UNDO (Nút nhỏ bên phải) ---
+  const handleUndo = async (e, habit) => {
+    e.stopPropagation(); // Chặn click vào card
+    const existingLog = logsToday.find(log => log.habit_id === habit.id);
+    if (!existingLog) return;
+
+    if (window.confirm(`Bạn muốn hủy kết quả "${habit.name}" ngày ${selectedDate}?`)) {
       try {
-        const getLocalDate = () => {
-            const d = new Date();
-            const offset = d.getTimezoneOffset() * 60000;
-            return (new Date(d - offset)).toISOString().slice(0, 10);
-        };
-        await habitApi.checkIn({
-          habit_id: habit.id,
-          record_date: getLocalDate(),
-          status: "COMPLETED"
-        });
-        await fetchDashboardData(); 
+        await habitApi.deleteLog(existingLog.id);
+        await fetchDashboardData(searchTerm, selectedDate);
       } catch (error) {
-        alert("Lỗi check-in: " + (error.response?.data?.detail || error.message));
+        alert("Lỗi: " + error.message);
       }
     }
   };
 
-  const handleDeleteHabit = async (e, habitId) => {
-    e.stopPropagation(); 
-    if (window.confirm("Bạn có chắc chắn muốn xóa thói quen này không?")) {
-      try {
-        await habitApi.deleteHabit(habitId);
-        await fetchDashboardData(); 
-      } catch (error) {
-        alert("Xóa thất bại!");
-      }
+  const getStatusStyle = (status) => {
+    switch (status) {
+        case 'COMPLETED': return { color: 'bg-green-500', border: 'border-green-200', bg: 'bg-green-50', icon: <CheckCircle size={16} className="text-green-600"/>, label: 'Hoàn thành' };
+        case 'PARTIAL': return { color: 'bg-blue-500', border: 'border-blue-200', bg: 'bg-blue-50', icon: <PieChart size={16} className="text-blue-600"/>, label: 'Một phần' };
+        case 'SKIPPED': return { color: 'bg-yellow-500', border: 'border-yellow-200', bg: 'bg-yellow-50', icon: <FastForward size={16} className="text-yellow-600"/>, label: 'Bỏ qua' };
+        case 'FAILED': return { color: 'bg-red-500', border: 'border-red-200', bg: 'bg-red-50', icon: <AlertCircle size={16} className="text-red-600"/>, label: 'Thất bại' };
+        default: return { color: 'bg-transparent', border: 'border-gray-100', bg: 'bg-white', icon: null, label: '' };
     }
-  };
-
-  const handleEditHabit = (e, habit) => {
-    e.stopPropagation(); 
-    setEditingHabit(habit); 
-    setIsCreateModalOpen(true); 
-  };
-
-  const handleCloseModal = () => {
-    setIsCreateModalOpen(false);
-    setEditingHabit(null); 
   };
 
   if (loading) return <div className="p-10 text-center">Đang tải... ⏳</div>;
 
   return (
     <div className="relative">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">Xin chào, {user?.full_name || "Bạn"}! 👋</h1>
-        <p className="mt-1 text-gray-500">Tiến độ ngày {new Date().toLocaleDateString('vi-VN')}</p>
+      {/* Header & Date Picker */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+        <div>
+            <h1 className="text-3xl font-bold text-gray-900">Xin chào, {user?.full_name || "Bạn"}! 👋</h1>
+            <p className="mt-1 text-gray-500">
+                {selectedDate === getTodayString() 
+                    ? "Hôm nay, " + new Date().toLocaleDateString('vi-VN', {weekday: 'long', day: 'numeric', month: 'long'})
+                    : "Đang xem: " + new Date(selectedDate).toLocaleDateString('vi-VN', {weekday: 'long', day: 'numeric', month: 'long'})
+                }
+            </p>
+        </div>
+        <div className="flex items-center gap-2 bg-white p-1.5 rounded-xl shadow-sm border border-gray-200">
+            <button onClick={handlePrevDay} className="p-2 hover:bg-gray-100 rounded-lg text-gray-600"><ChevronLeft size={20}/></button>
+            <div className="relative">
+                <input type="date" className="pl-9 pr-3 py-2 bg-gray-50 rounded-lg text-sm font-bold text-gray-700 outline-none border-none focus:ring-2 focus:ring-indigo-500"
+                    value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} />
+                <Calendar className="absolute left-2.5 top-2.5 text-gray-500 pointer-events-none" size={16}/>
+            </div>
+            <button onClick={handleNextDay} className="p-2 hover:bg-gray-100 rounded-lg text-gray-600"><ChevronRight size={20}/></button>
+            {selectedDate !== getTodayString() && (
+                <button onClick={() => setSelectedDate(getTodayString())} className="ml-2 px-3 py-2 bg-indigo-100 text-indigo-700 text-sm font-bold rounded-lg hover:bg-indigo-200 transition">Hôm nay</button>
+            )}
+        </div>
       </div>
 
        {/* Stats Grid */}
        <div className="grid grid-cols-1 gap-6 md:grid-cols-3 mb-8">
         <div className="flex items-center gap-4 rounded-xl bg-white p-6 shadow-sm border border-gray-100">
           <div className="flex h-12 w-12 items-center justify-center rounded-full bg-green-100"><CheckCircle className="text-green-500" /></div>
-          <div>
-            <p className="text-sm font-medium text-gray-500">Hoàn thành</p>
-            <p className="text-2xl font-bold text-gray-900">{dailyStats?.daily_rate || 0}%</p>
-          </div>
+          <div><p className="text-sm font-medium text-gray-500">Hoàn thành</p><p className="text-2xl font-bold text-gray-900">{dailyStats?.daily_rate || 0}%</p></div>
         </div>
         <div className="flex items-center gap-4 rounded-xl bg-white p-6 shadow-sm border border-gray-100">
           <div className="flex h-12 w-12 items-center justify-center rounded-full bg-blue-100"><Activity className="text-blue-500" /></div>
-          <div>
-            <p className="text-sm font-medium text-gray-500">Thói quen hôm nay</p>
-            <p className="text-2xl font-bold text-gray-900">{allHabitsToday.length || 0}</p>
-          </div>
+          <div><p className="text-sm font-medium text-gray-500">Cần làm</p><p className="text-2xl font-bold text-gray-900">{dailyStats?.total_assigned || 0}</p></div>
         </div>
         <div className="flex items-center gap-4 rounded-xl bg-white p-6 shadow-sm border border-gray-100">
           <div className="flex h-12 w-12 items-center justify-center rounded-full bg-orange-100"><Calendar className="text-orange-500" /></div>
-          <div>
-            <p className="text-sm font-medium text-gray-500">Hôm nay</p>
-            <p className="text-xl font-bold text-gray-900">{new Date().toLocaleDateString('vi-VN')}</p>
-          </div>
+          <div><p className="text-sm font-medium text-gray-500">Ngày chọn</p><p className="text-xl font-bold text-gray-900">{new Date(selectedDate).toLocaleDateString('vi-VN', {day:'2-digit', month:'2-digit'})}</p></div>
         </div>
       </div>
 
-      {/* Danh sách thói quen */}
+      {/* Habit List */}
       <div className="rounded-xl bg-white p-6 shadow-sm border border-gray-100">
-        
         <div className="flex flex-col md:flex-row md:items-center justify-between mb-6 gap-4">
-          <h2 className="text-xl font-bold text-gray-800">Danh sách thói quen cần làm hôm nay</h2>
-          
-          <div className="flex gap-2 w-full md:w-auto">
-            <div className="relative flex-1 md:flex-none">
-                <Search className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
-                <input 
-                    type="text" 
-                    placeholder="Tìm nhanh..." 
-                    className="w-full md:w-64 pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none transition"
-                    value={searchTerm}
-                    onChange={handleSearchChange}
-                />
-            </div>
-
-            <button 
-              onClick={() => setIsCreateModalOpen(true)}
-              className="flex items-center gap-2 rounded-lg bg-indigo-600 px-3 py-2 text-sm font-medium text-white hover:bg-indigo-700 transition whitespace-nowrap"
-            >
-              <Plus size={18} /> Thêm mới
-            </button>
+          <h2 className="text-xl font-bold text-gray-800">Danh sách công việc</h2>
+          <div className="relative flex-1 md:flex-none md:w-64">
+                <Search className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" /><input type="text" placeholder="Tìm nhanh..." className="w-full pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none transition" value={searchTerm} onChange={handleSearchChange}/>
           </div>
         </div>
         
         <div className="space-y-3">
           {habits.length === 0 ? (
-             <div className="text-center py-8 text-gray-400">
-                {searchTerm ? 'Không tìm thấy kết quả phù hợp.' : 'Hôm nay bạn không có lịch cho thói quen nào.'}
-             </div>
+             <div className="text-center py-8 text-gray-400">{searchTerm ? 'Không tìm thấy kết quả phù hợp.' : `Ngày ${new Date(selectedDate).toLocaleDateString('vi-VN')} bạn không có lịch cho thói quen nào.`}</div>
           ) : (
             habits.map((habit) => {
-              const isCompleted = logsToday.some(log => log.habit_id === habit.id);
-              const habitColor = habit.color || '#4F46E5';
+              const todayLog = logsToday.find(log => log.habit_id === habit.id);
+              const isDone = !!todayLog;
+              const statusStyle = isDone ? getStatusStyle(todayLog.status) : getStatusStyle('DEFAULT');
+              const categoryName = categories.find(c => c.id === habit.category_id)?.name || 'Chung';
 
               return (
-                <div 
-                  key={habit.id} 
-                  onClick={() => handleCheckInClick(habit)}
-                  className={`group flex items-center justify-between rounded-lg border p-4 transition cursor-pointer select-none
-                    ${isCompleted ? 'bg-gray-50 border-gray-200 opacity-75' : 'bg-white border-gray-100 hover:border-indigo-300 hover:shadow-md'}`}
+                <div key={habit.id} onClick={() => handleCardClick(habit)}
+                  className={`group flex items-center justify-between rounded-lg border p-3 pl-0 transition cursor-pointer select-none relative overflow-hidden
+                    ${isDone ? `${statusStyle.bg} ${statusStyle.border} opacity-90` : 'bg-white border-gray-100 hover:border-indigo-300 hover:shadow-md'}`}
                 >
-                  <div className="flex items-center gap-4">
-                    <div 
-                      className={`flex h-6 w-6 items-center justify-center rounded-full border-2 transition-all ${isCompleted ? 'border-transparent text-white' : 'border-gray-300 group-hover:border-indigo-400'}`}
-                      style={{ backgroundColor: isCompleted ? habitColor : 'transparent' }}
-                    >
-                      {isCompleted && <CheckCircle size={16} fill="white" />}
+                  <div className={`absolute left-0 top-0 bottom-0 w-1.5 ${isDone ? statusStyle.color : 'bg-transparent'}`}></div>
+                  <div className="flex items-center gap-4 pl-4">
+                    <div className={`flex h-6 w-6 items-center justify-center rounded-full border-2 transition-all ${isDone ? 'border-transparent bg-white shadow-sm' : 'border-gray-300 group-hover:border-indigo-400'}`} style={{ backgroundColor: isDone ? 'white' : 'transparent' }}>
+                      {isDone ? statusStyle.icon : null} 
                     </div>
                     <div>
-                      <span className={`font-medium block text-lg ${isCompleted ? 'text-gray-500 line-through' : 'text-gray-800'}`}>{habit.name}</span>
-                      <span className="text-sm text-gray-400">{habit.target_value ? `Mục tiêu: ${habit.target_value} ${habit.unit}` : habit.desc}</span>
+                      <div className="flex items-center gap-2">
+                        <span className={`font-medium text-lg ${isDone ? 'text-gray-600 line-through' : 'text-gray-800'}`}>{habit.name}</span>
+                        {isDone && <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold border ${statusStyle.border} bg-white opacity-80`}>{statusStyle.label}</span>}
+                      </div>
+                      <span className="text-sm text-gray-400">
+                        {isDone && todayLog.value > 0 ? `Kết quả: ${todayLog.value} ${habit.unit || ''}` : (habit.target_value ? `Mục tiêu: ${habit.target_value} ${habit.unit}` : habit.desc)}
+                      </span>
                     </div>
                   </div>
-
-                  <div className="flex items-center gap-3">
-                      <span className="rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-600 hidden md:inline-block">
-                        {habit.category_id === 1 ? 'Chung' : 'Khác'}
-                      </span>
-                      <button onClick={(e) => handleEditHabit(e, habit)} className="p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-full transition" title="Sửa"><Pencil size={18} /></button>
-                      <button onClick={(e) => handleDeleteHabit(e, habit.id)} className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-full transition" title="Xóa"><Trash2 size={18} /></button>
+                  
+                  <div className="flex items-center gap-3 pr-4">
+                      <span className="rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-600 hidden md:inline-block">{categoryName}</span>
+                      {/* Nút Undo (Chỉ hiện khi đã làm) */}
+                      {isDone && (
+                        <button onClick={(e) => handleUndo(e, habit)} className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-full transition" title="Hủy kết quả (Undo)">
+                            <RotateCcw size={18} />
+                        </button>
+                      )}
                   </div>
                 </div>
               );
@@ -259,18 +239,13 @@ const DashboardPage = () => {
         </div>
       </div>
 
-      <CreateHabitModal 
-        isOpen={isCreateModalOpen} 
-        onClose={handleCloseModal} 
-        onSuccess={() => fetchDashboardData()} 
-        habitToEdit={editingHabit} 
-      />
-
-      <CheckInModal
-        isOpen={isCheckInModalOpen}
-        onClose={() => setIsCheckInModalOpen(false)}
-        habit={checkInHabit}
-        onSuccess={() => fetchDashboardData()} 
+      <CheckInModal 
+        isOpen={isCheckInModalOpen} 
+        onClose={() => setIsCheckInModalOpen(false)} 
+        habit={checkInHabit} 
+        logToEdit={logToEdit} // Truyền log vào nếu đang sửa
+        checkInDate={selectedDate} 
+        onSuccess={() => fetchDashboardData(searchTerm, selectedDate)} 
       />
     </div>
   );

@@ -235,7 +235,7 @@ def verify_current_password(
 
 
 # 2. API Quên mật khẩu (Reset Password)
-@router.post("/forgot-password")
+@router.post("/forgot_password")
 def forgot_password(
     req: schemas.ForgotPasswordRequest,
     background_tasks: BackgroundTasks, # Dùng để gửi mail ngầm
