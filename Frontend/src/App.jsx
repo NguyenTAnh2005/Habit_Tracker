@@ -8,6 +8,7 @@ import StatsPage from './pages/StatsPage';
 import AdminRoute from './components/AdminRoute';
 import AdminUserPage from './pages/AdminUserPage';
 import HabitsPage from './pages/HabitPage';
+import ForgotPasswordPage from './pages/ForgotPassWordPage';
 
 // Component bảo vệ (giữ nguyên logic cũ)
 const PrivateRoute = ({ children }) => {
@@ -23,28 +24,14 @@ function App() {
         
         {/* Trang Login: Full màn hình */}
         <Route path="/login" element={<LoginPage />} />
-
         <Route path="/register" element={<RegisterPage />} />
+        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
 
 
         {/* === CÁC TRANG PRIVATE (CẦN LOGIN & CÓ SIDEBAR) === */}
-        <Route 
-          path="/" 
-          element={
-            <PrivateRoute> <MainLayout> <DashboardPage /> </MainLayout> </PrivateRoute>
-          } 
-        />
-        <Route 
-          path="/profile" 
-          element={
-            <PrivateRoute><MainLayout><ProfilePage /></MainLayout></PrivateRoute>
-          } 
-        />
-        <Route 
-          path="/stats" 
-          element={
-            <PrivateRoute><MainLayout><StatsPage /></MainLayout></PrivateRoute>
-          } 
+        <Route path="/" element={ <PrivateRoute> <MainLayout> <DashboardPage /> </MainLayout> </PrivateRoute>}/>
+        <Route path="/profile" element={ <PrivateRoute><MainLayout><ProfilePage /></MainLayout></PrivateRoute>}/>
+        <Route path="/stats" element={<PrivateRoute><MainLayout><StatsPage /></MainLayout></PrivateRoute>} 
         />
         <Route path="/habits" element={<PrivateRoute><MainLayout><HabitsPage /></MainLayout></PrivateRoute>} />
         <Route element={<AdminRoute />}> {/* Bọc bằng AdminRoute */}

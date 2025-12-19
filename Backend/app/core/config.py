@@ -15,6 +15,12 @@ class Settings(BaseSettings):
     
     SECRET_KEY: str = "TuanAnh_Sang_2024_Habit_Tracker_Project_Dev_Secret_Key"
 
+    MAIL_USERNAME: str = "23050118@student.bdu.edu.vn"
+    MAIL_PASSWORD: str = "wllo hkgr sfnl ydwu"
+    MAIL_FROM: str = "23050118@student.bdu.edu.vn"
+    MAIL_PORT: int = 587
+    MAIL_SERVER: str = "smtp.gmail.com"
+
     # 60 phút * 24 giờ * 14 ngày = 20160 phút
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 20160
 

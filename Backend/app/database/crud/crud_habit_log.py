@@ -117,3 +117,8 @@ def delete_habit_log(db: Session, log_id: int):
         return db_log # Trả về log đã xóa
     return None
 
+# Xoa tất cả log liên quan đến 1 habit (Dùng khi xóa habit)
+def delete_logs_by_habit(db: Session, habit_id: int):
+    db.query(models.HabitLog).filter(models.HabitLog.habit_id == habit_id).delete()
+    db.commit()
+

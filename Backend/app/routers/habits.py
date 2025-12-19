@@ -18,36 +18,39 @@ router = APIRouter(
 # ========================= API QUAN TRỌNG NHẤT (ĐẶT LÊN ĐẦU) =========================
 
 # API lấy danh sách thói quen CẦN LÀM trong ngày hôm nay
-# QUAN TRỌNG: Phải đặt API này trước các API có tham số /{habit_id}
 @router.get("/today", response_model=List[schemas.HabitResponse])
-def get_habits_today(
+def get_habits_by_date(
+    date_str: Optional[date] = None, # <--- Thêm tham số nhận ngày
     db: Session = Depends(db_connection.get_db),
     current_user: models.User = Depends(get_current_user)
 ):
-    # 1. Xác định thứ trong tuần hiện tại (2 - 8)
-    today = (datetime.now() + timedelta(hours=7)).date()
-    weekday_int = today.weekday() + 2
+    """
+    Lấy danh sách thói quen CẦN LÀM theo ngày chỉ định.
+    Nếu không gửi ngày -> Lấy hôm nay.
+    """
+    # 1. Xác định ngày cần lấy (Ưu tiên client gửi, nếu ko thì lấy server time)
+    target_date = date_str if date_str else (datetime.now()).date()
+    
+    # 2. Tính thứ trong tuần của ngày đó (0=T2 ... 6=CN) -> Convert sang hệ (2=T2...8=CN)
+    weekday_int = target_date.weekday() + 2 
 
-    # 2. Lấy tất cả Habit của user
+    # 3. Lấy tất cả Habit của user
     all_habits = crud_habit.get_habits_by_user(db, user_id=current_user.id, limit=9999)
 
-    habits_today = []
-
+    habits_filtered = []
     for habit in all_habits:
-        # Logic: Nếu frequency rỗng (làm mỗi ngày) HOẶC frequency chứa thứ hôm nay
+        # Logic lọc: Nếu frequency rỗng (làm mỗi ngày) HOẶC frequency chứa thứ của target_date
         if not habit.frequency: 
-             habits_today.append(habit)
+             habits_filtered.append(habit)
         else:
             # Xử lý an toàn dù DB lưu dạng List hay String
-            # Nếu là list [2,3,4]
             if isinstance(habit.frequency, list):
                 if weekday_int in habit.frequency:
-                    habits_today.append(habit)
-            # Nếu là string "2,3,4" (trường hợp DB lưu kiểu cũ)
+                    habits_filtered.append(habit)
             elif str(weekday_int) in str(habit.frequency):
-                 habits_today.append(habit)
+                 habits_filtered.append(habit)
     
-    return habits_today
+    return habits_filtered
 
 
 # ========================= API DÀNH CHO ADMIN =========================
@@ -149,6 +152,8 @@ def delete_habit(
     if habit.user_id != current_user.id and current_user.role_id != 1:
         raise HTTPException(status_code=403, detail="Không được xóa thói quen của người khác!")
 
+    # xóa các log liên quan đến thói quen này trước
+    crud_habit_log.delete_logs_by_habit(db, habit_id=habit_id)
     crud_habit.delete_habit(db, habit_id=habit_id)
     return {
         "message": "Đã xóa thành công",

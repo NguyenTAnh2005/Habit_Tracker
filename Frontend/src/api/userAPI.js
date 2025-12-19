@@ -24,6 +24,10 @@ const userApi = {
   // [ADMIN] Xóa user
   deleteUser(userId) {
     return axiosClient.delete(`/users/${userId}`);
+  },
+  // Quên mật khẩu - Gửi email chứa mật khẩu mới
+  forgotPassword(email) {
+    return axiosClient.post('/users/forgot_password', { email });
   }
 };
 
