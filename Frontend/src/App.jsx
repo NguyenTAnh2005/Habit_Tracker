@@ -1,7 +1,13 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import LoginPage from './pages/LoginPage';
 import DashboardPage from './pages/DashBoardPage';
-import MainLayout from './layout/MainLayout'; // Import Layout
+import MainLayout from './layout/MainLayout'; 
+import RegisterPage from './pages/RegisterPage';
+import ProfilePage from './pages/ProfilePage';
+import StatsPage from './pages/StatsPage';
+import AdminRoute from './components/AdminRoute';
+import AdminUserPage from './pages/AdminUserPage';
+import HabitsPage from './pages/HabitPage';
 
 // Component bảo vệ (giữ nguyên logic cũ)
 const PrivateRoute = ({ children }) => {
@@ -13,23 +19,44 @@ function App() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* Trang Login: KHÔNG dùng MainLayout (Full màn hình) */}
+        {/* === CÁC TRANG PUBLIC (KHÔNG CẦN LOGIN) === */}
+        
+        {/* Trang Login: Full màn hình */}
         <Route path="/login" element={<LoginPage />} />
 
-        {/* Các trang bên trong: DÙNG MainLayout (Có Sidebar) */}
+        <Route path="/register" element={<RegisterPage />} />
+
+
+        {/* === CÁC TRANG PRIVATE (CẦN LOGIN & CÓ SIDEBAR) === */}
         <Route 
           path="/" 
           element={
-            <PrivateRoute>
-              <MainLayout>
-                <DashboardPage />
-              </MainLayout>
-            </PrivateRoute>
+            <PrivateRoute> <MainLayout> <DashboardPage /> </MainLayout> </PrivateRoute>
           } 
         />
-        
-        {/* Sau này thêm trang Habits, Stats thì cũng bọc y chang vậy */}
-        {/* <Route path="/habits" element={<PrivateRoute><MainLayout><HabitsPage /></MainLayout></PrivateRoute>} /> */}
+        <Route 
+          path="/profile" 
+          element={
+            <PrivateRoute><MainLayout><ProfilePage /></MainLayout></PrivateRoute>
+          } 
+        />
+        <Route 
+          path="/stats" 
+          element={
+            <PrivateRoute><MainLayout><StatsPage /></MainLayout></PrivateRoute>
+          } 
+        />
+        <Route path="/habits" element={<PrivateRoute><MainLayout><HabitsPage /></MainLayout></PrivateRoute>} />
+        <Route element={<AdminRoute />}> {/* Bọc bằng AdminRoute */}
+             <Route 
+                path="/admin/users" 
+                element={
+                    <MainLayout> {/* Vẫn dùng MainLayout để có Sidebar */}
+                        <AdminUserPage />
+                    </MainLayout>
+                } 
+             />
+        </Route>
 
       </Routes>
     </BrowserRouter>

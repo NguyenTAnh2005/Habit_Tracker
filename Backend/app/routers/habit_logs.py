@@ -9,6 +9,7 @@ from app.database.crud import crud_habit_log, crud_habit
 from app.core.dependencies import get_current_user, get_admin_user
 from datetime import date, datetime, timedelta
 
+
 router = APIRouter(
     prefix = "/logs",
     tags = ["Habit-logs"]
@@ -45,10 +46,13 @@ def check_in_habit(
 @router.get("/habit/{habit_id}", response_model=List[schemas.HabitLogResponse])
 def get_history_by_habit(
     habit_id: int, 
-    skip: int = 0, limit: int = 30, 
+    skip: int = 0, 
+    limit: int = 30,
+    from_date: Optional[date] = None, # <--- Nhận tham số từ Query
+    to_date: Optional[date] = None,   # <--- Nhận tham số từ Query
     db: Session = Depends(db_connection.get_db),
     current_user: models.User = Depends(get_current_user)
-    ):
+):
     # Lấy thông tin Habit
     habit = crud_habit.get_habit_by_id(db, habit_id)
     
@@ -62,7 +66,15 @@ def get_history_by_habit(
             detail = "Bạn không có quyền xem lịch sử thói quen này!"
         )
 
-    return crud_habit_log.get_logs_by_habit(db, habit_id=habit_id, skip=skip, limit=limit)
+    # Gọi CRUD mới đã update
+    return crud_habit_log.get_logs_by_habit(
+        db, 
+        habit_id=habit_id, 
+        skip=skip, 
+        limit=limit,
+        from_date=from_date,
+        to_date=to_date
+    )
 
 
 # 3. Xem tất cả log của User 
@@ -102,6 +114,7 @@ def get_all_logs_by_user(
             "id": log.id,
             "habit_id": log.habit_id,
             "value": log.value,
+            "unit": log.habit.unit if log.habit else "",
             "status": log.status,
             "record_date": log.record_date,
             "created_at": log.created_at,
@@ -182,24 +195,22 @@ def get_daily_stats_overall(
     current_user: models.User = Depends(get_current_user)
 ):
     """
-    Tính % hoàn thành của TOÀN BỘ thói quen trong NGÀY HÔM NAY.
+    Tính % hoàn thành ngày.
+    QUY TẮC NGHIÊM NGẶT:
+    - Chỉ tính COMPLETED là 1.
+    - PARTIAL, SKIPPED, FAILED đều là 0.
     """
-    today = (datetime.now() + timedelta(hours=7)).date()  # Giờ VN
-    weekday_int = today.weekday()+2  # 0=Thứ 2, ..., 6=CN
+    today = (datetime.now() + timedelta(hours=7)).date() 
+    weekday_int = today.weekday() + 2
     
-    # 1. Lấy tất cả Habit của User
+    # 1. Lấy tất cả Habit
     all_habits = crud_habit.get_habits_by_user(db, user_id=current_user.id, limit=9999)
     
-    # 2. Lọc ra những habit CẦN LÀM hôm nay (Dựa vào mảng frequency)
-    # Giả sử frequency lưu chuỗi "0,1,2" hoặc json [0,1,2]. 
-    # Tạm thời logic đơn giản: Nếu habit có frequency thì check, ko có thì coi như ngày nào cũng làm.
+    # 2. Lọc Habit cần làm hôm nay
     habits_today = []
     for h in all_habits:
-        # Lưu ý: Bạn cần kiểm tra lại kiểu dữ liệu của h.frequency trong DB của bạn
-        # Ở đây mình giả định nếu frequency rỗng là làm mỗi ngày
         if not h.frequency: 
              habits_today.append(h)
-        # Nếu frequency là list hoặc string chứa weekday_int
         elif str(weekday_int) in str(h.frequency): 
             habits_today.append(h)
             
@@ -211,22 +222,25 @@ def get_daily_stats_overall(
             "daily_rate": 0.0
         }
 
-    # 3. Đếm xem cái nào đã log COMPLETED hôm nay
+    # 3. Lấy log COMPLETED hôm nay
     habit_ids_today = [h.id for h in habits_today]
     
-    todays_logs = db.query(models.HabitLog).filter(
+    # Chỉ query những cái status là COMPLETED
+    completed_logs = db.query(models.HabitLog).filter(
         models.HabitLog.habit_id.in_(habit_ids_today),
         models.HabitLog.record_date == today,
-        models.HabitLog.status == "COMPLETED" 
+        models.HabitLog.status == "COMPLETED" # <--- CHỈ LẤY CÁI NÀY
     ).all()
     
-    # Dùng set để loại bỏ log trùng (nếu có)
-    unique_done_habits = set([log.habit_id for log in todays_logs])
-    completed_count = len(unique_done_habits)
+    # Đếm số lượng habit đã hoàn thành (Dùng set để tránh log trùng)
+    unique_completed_habits = set([log.habit_id for log in completed_logs])
+    completed_count = len(unique_completed_habits)
 
-    # 4. Tính toán
+    # 4. Tính toán %
     total_assigned = len(habits_today)
-    rate = (completed_count / total_assigned) * 100 if total_assigned > 0 else 0
+    
+    # Công thức thuần túy: (Số lượng Hoàn thành / Tổng số phải làm) * 100
+    rate = (completed_count / total_assigned) * 100 if total_assigned > 0 else 0.0
     
     return {
         "date": today,
@@ -236,21 +250,25 @@ def get_daily_stats_overall(
     }
 
 
-
-# 8. Lấy tất cả log trong ngày hôm nay của user (Dành cho User)
+# 8. Lấy tất cả log trong ngày hôm nay của user (Dành cho Dashboard)
 @router.get("/today", response_model=List[schemas.HabitLogResponse])
 def get_todays_logs(
     db: Session = Depends(db_connection.get_db),
     current_user: models.User = Depends(get_current_user)
 ):
-    today = (datetime.now() + timedelta(hours=7)).date() # Giờ VN
+    """
+    API trả về danh sách các lần check-in trong ngày hôm nay của User.
+    Dùng để Frontend biết habit nào đã làm xong để tô màu xanh.
+    """
+    # Lấy ngày hiện tại (Server time + 7h cho VN)
+    today = (datetime.now() + timedelta(hours=7)).date()
     
-    # Lấy các log của user này trong ngày hôm nay
-    # Join với bảng Habit để chắc chắn là habit của user đó
-    logs = db.query(models.HabitLog).join(models.Habit).filter(
-        models.Habit.user_id == current_user.id,
-        models.HabitLog.record_date == today
-    ).all()
-    
-    return logs
-
+    # Query bảng HabitLog, join với Habit để lọc đúng User
+    todays_logs = db.query(models.HabitLog)\
+        .join(models.Habit, models.HabitLog.habit_id == models.Habit.id)\
+        .filter(
+            models.Habit.user_id == current_user.id, # Của chính user này
+            models.HabitLog.record_date == today      # Và phải là hôm nay
+        ).all()
+        
+    return todays_logs

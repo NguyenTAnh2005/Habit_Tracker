@@ -43,6 +43,7 @@ class UserResponse(BaseModel):
     email: str           # Muốn hiện email
     full_name: str       # Muốn hiện tên đầy đủ
     role_id: int
+    created_at: datetime
 
     # Cấu hình để Pydantic đọc được dữ liệu từ SQLAlchemy (Object)
     class Config:
@@ -121,7 +122,8 @@ class HabitLogBase(BaseModel):
     habit_id: int
     record_date: date
     status: HabitLogStatus
-    value: Optional[float] = None 
+    value: Optional[float] = None
+    unit: Optional[str] = None  # Thêm trường unit để hiển thị đơn vị
 
 class HabitLogCreate(HabitLogBase):
     pass

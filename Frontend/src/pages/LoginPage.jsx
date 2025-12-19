@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { LogIn, User, Lock, Eye, EyeOff } from 'lucide-react';
 import authApi from '../api/authApi'; 
 
@@ -131,9 +131,9 @@ const LoginPage = () => {
 
         <div className="mt-6 text-center text-sm text-gray-500">
           Chưa có tài khoản?{' '}
-          <a href="/register" className="font-medium text-indigo-600 hover:underline">
+          <Link to="/register" className="font-medium text-indigo-600 hover:underline">
             Đăng ký ngay
-          </a>
+          </Link>
         </div>
       </div>
     </div>

@@ -1,17 +1,32 @@
-import { Home, List, BarChart2, Settings, LogOut, User } from 'lucide-react';
+import { LogOut } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Home, List, BarChart2, User, Users, Shield } from 'lucide-react'; // Thêm icon Users, Shield
 import { NavLink, useNavigate } from 'react-router-dom';
+import authApi from '../api/authApi';
 
 const Sidebar = () => {
   const navigate = useNavigate();
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  // Check quyền lúc mount sidebar
+  useEffect(() => {
+    const checkUser = async () => {
+        try {
+            const user = await authApi.getMe();
+            if (user.role_id === 1) setIsAdmin(true);
+        } catch (e) {
+            // Lỗi thì thôi coi như user thường
+        }
+    };
+    checkUser();
+  }, []);
 
   const handleLogout = () => {
-    // Xóa token ở cả 2 nơi
     localStorage.removeItem('access_token');
     sessionStorage.removeItem('access_token');
     navigate('/login');
   };
 
-  // Danh sách menu
   const menuItems = [
     { path: '/', name: 'Tổng quan', icon: <Home size={20} /> },
     { path: '/habits', name: 'Thói quen', icon: <List size={20} /> },
@@ -21,12 +36,10 @@ const Sidebar = () => {
 
   return (
     <div className="flex h-screen w-64 flex-col bg-white border-r border-gray-200">
-      {/* Logo Area */}
       <div className="flex h-16 items-center justify-center border-b border-gray-200">
         <h1 className="text-2xl font-bold text-indigo-600">HabitTracker 🚀</h1>
       </div>
 
-      {/* Menu Links */}
       <nav className="flex-1 space-y-1 px-2 py-4">
         {menuItems.map((item) => (
           <NavLink
@@ -34,20 +47,35 @@ const Sidebar = () => {
             to={item.path}
             className={({ isActive }) =>
               `flex items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium transition-colors ${
-                isActive
-                  ? 'bg-indigo-50 text-indigo-600' // Style khi đang chọn
-                  : 'text-gray-700 hover:bg-gray-100' // Style bình thường
+                isActive ? 'bg-indigo-50 text-indigo-600' : 'text-gray-700 hover:bg-gray-100'
               }`
             }
           >
-            {item.icon}
-            {item.name}
+            {item.icon} {item.name}
           </NavLink>
         ))}
+
+        {/* 👇 MENU RIÊNG CHO ADMIN */}
+        {isAdmin && (
+            <>
+                <div className="pt-4 pb-2">
+                    <p className="px-4 text-xs font-semibold text-gray-400 uppercase tracking-wider">Quản trị viên</p>
+                </div>
+                <NavLink
+                    to="/admin/users"
+                    className={({ isActive }) =>
+                    `flex items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium transition-colors ${
+                        isActive ? 'bg-purple-50 text-purple-600' : 'text-gray-700 hover:bg-gray-100'
+                    }`
+                    }
+                >
+                    <Users size={20} /> Quản lý User
+                </NavLink>
+            </>
+        )}
       </nav>
 
-      {/* Footer / Logout */}
-      <div className="border-t border-gray-200 p-4">
+     <div className="border-t border-gray-200 p-4">
         <button
           onClick={handleLogout}
           className="flex w-full items-center gap-3 rounded-lg px-4 py-2 text-sm font-medium text-red-600 transition-colors hover:bg-red-50"

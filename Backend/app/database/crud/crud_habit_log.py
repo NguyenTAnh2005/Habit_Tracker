@@ -2,6 +2,8 @@ from sqlalchemy.orm import Session
 from sqlalchemy import desc
 from app.database import models
 from app.schemas import schemas
+from typing import List, Optional
+from datetime import date
 
 # 1. Logic Check-in: Tạo mới (hoặc Update nếu đã tồn tại)
 def create_or_update_habit_log(db: Session, log: schemas.HabitLogCreate):
@@ -11,28 +13,44 @@ def create_or_update_habit_log(db: Session, log: schemas.HabitLogCreate):
         models.HabitLog.record_date == log.record_date
     ).first()
     
+    # Vì bảng HabitLog trong DB không có cột 'unit'
+    log_data = log.model_dump(exclude={"unit"}) 
+
     if existing_log:
-        # Nếu có rồi -> Update thủ công các trường cần thiết
-        existing_log.status = log.status
-        existing_log.value = log.value
-        # (Không gọi hàm update_habit_log để tránh lệch kiểu dữ liệu)
+        # Update (Dùng log_data đã sạch)
+        for key, value in log_data.items():
+            setattr(existing_log, key, value)
+            
         db.commit()
         db.refresh(existing_log)
         return existing_log
 
-    # Nếu chưa có -> Tạo mới
-    db_log = models.HabitLog(**log.model_dump())
+    # Create (Dùng log_data đã sạch)
+    db_log = models.HabitLog(**log_data)
     db.add(db_log)
     db.commit()
     db.refresh(db_log)
     return db_log
 
 # 2. Lấy lịch sử log của 1 Habit
-def get_logs_by_habit(db: Session, habit_id: int, skip: int = 0, limit: int = 30):
-    return db.query(models.HabitLog)\
-             .filter(models.HabitLog.habit_id == habit_id)\
-             .order_by(desc(models.HabitLog.record_date))\
-             .offset(skip).limit(limit).all()
+def get_logs_by_habit(
+    db: Session, 
+    habit_id: int, 
+    skip: int = 0, 
+    limit: int = 30, 
+    from_date: Optional[date] = None, # <--- Thêm
+    to_date: Optional[date] = None    # <--- Thêm
+):
+    query = db.query(models.HabitLog).filter(models.HabitLog.habit_id == habit_id)
+    
+    # Logic lọc ngày
+    if from_date:
+        query = query.filter(models.HabitLog.record_date >= from_date)
+    if to_date:
+        query = query.filter(models.HabitLog.record_date <= to_date)
+        
+    return query.order_by(desc(models.HabitLog.record_date))\
+                .offset(skip).limit(limit).all()
 
 # 3. Lấy tất cả Log của 1 User (Kèm tên Habit)
 def get_all_logs_by_user(db: Session, user_id: int, skip: int = 0, limit: int = 100):
