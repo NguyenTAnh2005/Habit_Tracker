@@ -54,3 +54,25 @@ def update_category(
     return {
         "message": f"Cập nhật danh mục thói quen có id {category_id} thành công!",
         "category": jsonable_encoder(updated_category)}
+
+
+# API Xóa Category
+@router.delete("/{category_id}")
+def delete_category(
+    category_id: int, 
+    db: Session = Depends(db_connection.get_db),
+    current_user: models.User = Depends(get_admin_user)
+    ):
+    deleted_category = crud_category.delete_category(db = db, category_id = category_id)
+    list_habits = crud_category.get_habits_by_category(db = db, category_id = category_id)
+    if len(list_habits) > 0:
+        raise HTTPException(
+            status_code = 400, 
+            detail = "Không thể xóa danh mục thói quen này vì vẫn còn thói quen thuộc danh mục!"
+        )
+    if deleted_category is None:
+        raise HTTPException(status_code = 404, detail = "Không tìm thấy danh mục thói quen để xóa")
+    return {
+        "message": f"Xóa danh mục thói quen có id {category_id} thành công!",
+        "category": jsonable_encoder(deleted_category)
+    } 

@@ -3,10 +3,12 @@ from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
 from sqlalchemy.orm import Session
 from app.database import db_connection, models
-from .utils import SECRET_KEY, ALGORITHM # Import cấu hình từ utils
 from app.schemas import schemas
 
-# Định nghĩa nơi lấy token (URL này chỉ để Swagger UI biết chỗ để gọi login)
+# 👇 SỬA Ở ĐÂY: Import settings từ config thay vì lấy lẻ tẻ từ utils
+from app.core.config import settings 
+
+# Định nghĩa nơi lấy token
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
 
 # Hàm Dependency: Lấy user hiện tại từ Token
@@ -20,20 +22,21 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
     
     try:
         # 1. Giải mã Token
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        # 👇 SỬA Ở ĐÂY: Dùng settings.SECRET_KEY
+        # Algorithm thường mặc định là HS256, bạn có thể hardcode luôn hoặc thêm vào settings
+        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])
         
         # 2. Lấy User ID (sub) từ trong token
         user_id: str = payload.get("sub")
         if user_id is None:
             raise credentials_exception
             
-        # (Tùy chọn: Validate thêm các dữ liệu khác trong token data)
         token_data = schemas.TokenData(user_id=int(user_id))
         
     except JWTError:
         raise credentials_exception
     
-    # 3. Tìm User trong Database để đảm bảo User đó còn tồn tại
+    # 3. Tìm User trong Database
     user = db.query(models.User).filter(models.User.id == token_data.user_id).first()
     if user is None:
         raise credentials_exception
@@ -44,14 +47,9 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
 ADMIN_ROLE_ID = 1 
 # Hàm Dependency: Chỉ cho phép Admin đi qua
 def get_admin_user(current_user: models.User = Depends(get_current_user)):
-    """
-    Hàm này kẹp sau get_current_user.
-    Nó kiểm tra xem user lấy được từ token có phải là Admin không.
-    """
     if current_user.role_id != ADMIN_ROLE_ID:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, 
             detail="Bạn không có quyền truy cập (Admin only)!"
         )
     return current_user
-

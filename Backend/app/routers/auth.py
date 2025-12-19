@@ -5,7 +5,6 @@ from sqlalchemy.orm import Session
 from app.database import db_connection, models
 from app.core.utils import check_password, create_access_token 
 from app.schemas import schemas
-from datetime import timedelta
 
 router = APIRouter(tags=["Authentication"])
 
@@ -29,10 +28,8 @@ def login_for_access_token(
         )
     
     # 3. Tạo Token
-    access_token_expires = timedelta(minutes=30)
     access_token = create_access_token(
         data={"sub": str(user.id)}, 
-        expires_delta=access_token_expires
     )
     
     return {

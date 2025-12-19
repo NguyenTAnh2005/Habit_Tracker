@@ -47,7 +47,21 @@ class UserResponse(BaseModel):
     # Cấu hình để Pydantic đọc được dữ liệu từ SQLAlchemy (Object)
     class Config:
         from_attributes = True
-     
+
+# Schema dùng để xác minh mật khẩu (Khi user đổi mật khẩu)
+class VerifyPasswordRequest(BaseModel):
+    password: str
+    
+# Schema dùng để quên mật khẩu (Gửi email lấy lại)
+class ForgotPasswordRequest(BaseModel):
+    email: str
+
+# Schema dùng để cập nhật thông tin user (Profile)
+class UserUpdate(BaseModel):
+    full_name: Optional[str] = None
+    email: Optional[str] = None
+    password: Optional[str] = None
+
 #===============SCHEMA CHO BẢNG HABIT CATEGORY
 class HabitCategoryBase(BaseModel):
     name: str
@@ -123,6 +137,12 @@ class HabitLogResponse(HabitLogBase):
     created_at: datetime
     class Config:
         from_attributes = True
+
+# Habit Log response dành cho code logic 
+class HabitStatsResponse(BaseModel):
+    habit_id: int
+    streak: int                 # Chuỗi hiện tại
+    total_logs: int             # Tổng số lần check-in
 
 # Schema cho User xem list log của mình (Kèm tên Habit)
 class HabitLogUserResponse(HabitLogResponse): 
