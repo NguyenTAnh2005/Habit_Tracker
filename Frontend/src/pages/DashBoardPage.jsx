@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-// 👇 Đã thêm icon Search
 import { Activity, CheckCircle, Plus, Calendar, Pencil, Trash2, Search } from 'lucide-react';
 import habitApi from '../api/habitAPI';
 import authApi from '../api/authApi';
@@ -9,63 +8,79 @@ import CheckInModal from '../components/CheckInModal';
 const DashboardPage = () => {
   const [user, setUser] = useState(null);
   const [dailyStats, setDailyStats] = useState(null);
-  const [habits, setHabits] = useState([]);
+  
+  // State quản lý danh sách thói quen
+  const [habits, setHabits] = useState([]); // Danh sách đang hiển thị (có thể đã bị lọc)
+  const [allHabitsToday, setAllHabitsToday] = useState([]); // Danh sách gốc của ngày hôm nay
+  
   const [logsToday, setLogsToday] = useState([]); 
   const [loading, setLoading] = useState(true);
 
-  // 👇 STATE CHO TÌM KIẾM
+  // State tìm kiếm
   const [searchTerm, setSearchTerm] = useState('');
-  const [typingTimeout, setTypingTimeout] = useState(null);
 
   // Modal states
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [editingHabit, setEditingHabit] = useState(null);
-  
-  // Check-in Modal states
   const [checkInHabit, setCheckInHabit] = useState(null); 
   const [isCheckInModalOpen, setIsCheckInModalOpen] = useState(false);
 
-  // Hàm load dữ liệu (Đã sửa để nhận tham số search)
-  const fetchDashboardData = async (search = '') => {
+  // --- HÀM LOAD DỮ LIỆU ---
+  const fetchDashboardData = async () => {
     try {
-      // 👇 Truyền params search vào API getAllHabits
-      // Lưu ý: habitAPI.js của bạn phải hỗ trợ nhận params nhé (getAllHabits(params))
-      const [statsData, habitsData, logsData] = await Promise.all([
+      // 1. Gọi API lấy dữ liệu song song
+      const [statsData, habitsTodayData, logsData] = await Promise.all([
         habitApi.getDailyStats(),
-        habitApi.getAllHabits({ search: search }), 
+        habitApi.getHabitsToday(), // <--- DÙNG API MỚI (chỉ lấy việc hôm nay)
         habitApi.getTodaysLogs()
       ]);
+
       setDailyStats(statsData);
-      setHabits(habitsData);
       setLogsToday(logsData);
+      
+      // 2. Lưu danh sách gốc
+      setAllHabitsToday(habitsTodayData);
+
+      // 3. Nếu đang có từ khóa tìm kiếm -> Lọc luôn trên client
+      if (searchTerm) {
+        const filtered = habitsTodayData.filter(h => 
+            h.name.toLowerCase().includes(searchTerm.toLowerCase())
+        );
+        setHabits(filtered);
+      } else {
+        setHabits(habitsTodayData);
+      }
+
     } catch (error) {
       console.error("Lỗi load data:", error);
     }
   };
 
-  // 👇 Xử lý khi gõ tìm kiếm (Debounce: Đợi 0.5s sau khi ngừng gõ mới gọi API)
+  // --- XỬ LÝ TÌM KIẾM (CLIENT SIDE) ---
   const handleSearchChange = (e) => {
-    const value = e.target.value;
-    setSearchTerm(value);
+    const keyword = e.target.value;
+    setSearchTerm(keyword);
 
-    // Xóa timeout cũ nếu người dùng vẫn đang gõ
-    if (typingTimeout) {
-      clearTimeout(typingTimeout);
+    if (!keyword) {
+        // Nếu xóa trắng ô tìm kiếm -> Hiện lại toàn bộ
+        setHabits(allHabitsToday);
+    } else {
+        // Lọc trên danh sách gốc
+        const filtered = allHabitsToday.filter(h => 
+            h.name.toLowerCase().includes(keyword.toLowerCase())
+        );
+        setHabits(filtered);
     }
-
-    // Đặt timeout mới
-    setTypingTimeout(setTimeout(() => {
-      fetchDashboardData(value); // Gọi API tìm kiếm
-    }, 500));
   };
 
+  // Load lần đầu khi vào trang
   useEffect(() => {
     const initData = async () => {
       setLoading(true);
       try {
         const userData = await authApi.getMe();
         setUser(userData);
-        await fetchDashboardData(); // Load lần đầu (search rỗng)
+        await fetchDashboardData();
       } catch (error) {
         console.error(error);
       } finally {
@@ -75,16 +90,17 @@ const DashboardPage = () => {
     initData();
   }, []);
 
-  // LOGIC CHECK-IN / UNDO THÔNG MINH
+  // --- CÁC HÀM SỰ KIỆN ---
+
   const handleCheckInClick = async (habit) => {
     const existingLog = logsToday.find(log => log.habit_id === habit.id);
 
-    // UNDO
+    // UNDO CHECK-IN
     if (existingLog) {
       if (window.confirm(`Bạn muốn hủy check-in "${habit.name}"?`)) {
         try {
           await habitApi.deleteLog(existingLog.id); 
-          await fetchDashboardData(searchTerm); // Refresh UI (giữ nguyên từ khóa tìm kiếm)
+          await fetchDashboardData(); 
         } catch (error) {
           alert("Hủy thất bại!");
         }
@@ -92,47 +108,41 @@ const DashboardPage = () => {
       return; 
     }
 
-    // CHECK-IN ĐỊNH LƯỢNG
+    // CHECK-IN (Định lượng hoặc Cơ bản)
     if (habit.target_value && habit.target_value > 0) {
       setCheckInHabit(habit);
       setIsCheckInModalOpen(true);
-      return;
-    }
-
-    // CHECK-IN CƠ BẢN
-    try {
-      // Fix lỗi lệch giờ bằng cách lấy ngày local
-      const getLocalDate = () => {
-        const d = new Date();
-        const offset = d.getTimezoneOffset() * 60000;
-        return (new Date(d - offset)).toISOString().slice(0, 10);
-      };
-
-      await habitApi.checkIn({
-        habit_id: habit.id,
-        record_date: getLocalDate(),
-        status: "COMPLETED"
-      });
-      await fetchDashboardData(searchTerm); // Refresh UI
-    } catch (error) {
-      alert("Lỗi check-in: " + error.message);
+    } else {
+      try {
+        const getLocalDate = () => {
+            const d = new Date();
+            const offset = d.getTimezoneOffset() * 60000;
+            return (new Date(d - offset)).toISOString().slice(0, 10);
+        };
+        await habitApi.checkIn({
+          habit_id: habit.id,
+          record_date: getLocalDate(),
+          status: "COMPLETED"
+        });
+        await fetchDashboardData(); 
+      } catch (error) {
+        alert("Lỗi check-in: " + (error.response?.data?.detail || error.message));
+      }
     }
   };
 
-  // Hàm Xóa Habit
   const handleDeleteHabit = async (e, habitId) => {
     e.stopPropagation(); 
     if (window.confirm("Bạn có chắc chắn muốn xóa thói quen này không?")) {
       try {
         await habitApi.deleteHabit(habitId);
-        fetchDashboardData(searchTerm); 
+        await fetchDashboardData(); 
       } catch (error) {
         alert("Xóa thất bại!");
       }
     }
   };
 
-  // Hàm Sửa Habit
   const handleEditHabit = (e, habit) => {
     e.stopPropagation(); 
     setEditingHabit(habit); 
@@ -165,8 +175,8 @@ const DashboardPage = () => {
         <div className="flex items-center gap-4 rounded-xl bg-white p-6 shadow-sm border border-gray-100">
           <div className="flex h-12 w-12 items-center justify-center rounded-full bg-blue-100"><Activity className="text-blue-500" /></div>
           <div>
-            <p className="text-sm font-medium text-gray-500">Thói quen</p>
-            <p className="text-2xl font-bold text-gray-900">{habits.length || 0}</p>
+            <p className="text-sm font-medium text-gray-500">Thói quen hôm nay</p>
+            <p className="text-2xl font-bold text-gray-900">{allHabitsToday.length || 0}</p>
           </div>
         </div>
         <div className="flex items-center gap-4 rounded-xl bg-white p-6 shadow-sm border border-gray-100">
@@ -181,17 +191,15 @@ const DashboardPage = () => {
       {/* Danh sách thói quen */}
       <div className="rounded-xl bg-white p-6 shadow-sm border border-gray-100">
         
-        {/* 👇 HEADER DANH SÁCH (BAO GỒM NÚT SEARCH VÀ THÊM MỚI) */}
         <div className="flex flex-col md:flex-row md:items-center justify-between mb-6 gap-4">
-          <h2 className="text-xl font-bold text-gray-800">Danh sách thói quen</h2>
+          <h2 className="text-xl font-bold text-gray-800">Danh sách thói quen cần làm hôm nay</h2>
           
           <div className="flex gap-2 w-full md:w-auto">
-            {/* THANH TÌM KIẾM MỚI */}
             <div className="relative flex-1 md:flex-none">
                 <Search className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
                 <input 
                     type="text" 
-                    placeholder="Tìm thói quen..." 
+                    placeholder="Tìm nhanh..." 
                     className="w-full md:w-64 pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none transition"
                     value={searchTerm}
                     onChange={handleSearchChange}
@@ -210,7 +218,7 @@ const DashboardPage = () => {
         <div className="space-y-3">
           {habits.length === 0 ? (
              <div className="text-center py-8 text-gray-400">
-                Không tìm thấy thói quen nào.
+                {searchTerm ? 'Không tìm thấy kết quả phù hợp.' : 'Hôm nay bạn không có lịch cho thói quen nào.'}
              </div>
           ) : (
             habits.map((habit) => {
@@ -254,7 +262,7 @@ const DashboardPage = () => {
       <CreateHabitModal 
         isOpen={isCreateModalOpen} 
         onClose={handleCloseModal} 
-        onSuccess={() => fetchDashboardData(searchTerm)} // Refresh giữ nguyên search
+        onSuccess={() => fetchDashboardData()} 
         habitToEdit={editingHabit} 
       />
 
@@ -262,7 +270,7 @@ const DashboardPage = () => {
         isOpen={isCheckInModalOpen}
         onClose={() => setIsCheckInModalOpen(false)}
         habit={checkInHabit}
-        onSuccess={() => fetchDashboardData(searchTerm)} // Refresh giữ nguyên search
+        onSuccess={() => fetchDashboardData()} 
       />
     </div>
   );
