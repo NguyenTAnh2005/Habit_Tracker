@@ -46,18 +46,21 @@ const HabitHistoryModal = ({ isOpen, onClose, habit }) => {
   if (!isOpen || !habit) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4 backdrop-blur-sm">
-      <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-xl animate-in zoom-in duration-200 flex flex-col max-h-[90vh]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-sm p-4">
+      {/* Thêm mx-auto và w-full để responsive tốt hơn */}
+      <div className="w-full max-w-lg rounded-2xl bg-white p-4 md:p-6 shadow-xl animate-in zoom-in duration-200 flex flex-col max-h-[85vh]">
         
-        <div className="mb-4 flex items-center justify-between border-b pb-3">
-          <div><h3 className="text-lg font-bold text-gray-800">Lịch sử: {habit.name}</h3></div>
-          <button onClick={onClose}><X size={20} className="text-gray-400 hover:text-gray-600" /></button>
+        {/* Header */}
+        <div className="mb-4 flex items-center justify-between border-b pb-3 shrink-0">
+          <div><h3 className="text-lg font-bold text-gray-800 truncate pr-2">Lịch sử: {habit.name}</h3></div>
+          <button onClick={onClose} className="p-1 hover:bg-gray-100 rounded-full"><X size={20} className="text-gray-400" /></button>
         </div>
         
-        <div className="flex justify-between items-center mb-4">
+        {/* Controls */}
+        <div className="flex justify-between items-center mb-4 shrink-0">
             <div className="flex items-center gap-2 bg-gray-50 px-3 py-2 rounded-lg border">
                 <Calendar size={16} className="text-gray-500"/>
-                <input type="month" className="bg-transparent text-sm outline-none text-gray-700 font-medium"
+                <input type="month" className="bg-transparent text-sm outline-none text-gray-700 font-medium cursor-pointer"
                     value={selectedMonth} onChange={(e) => { setSelectedMonth(e.target.value); setPage(0); }} />
             </div>
             <div className="flex gap-1">
@@ -66,6 +69,7 @@ const HabitHistoryModal = ({ isOpen, onClose, habit }) => {
             </div>
         </div>
 
+        {/* List (Scrollable) */}
         <div className="flex-1 overflow-y-auto pr-1">
             {loading ? <div className="text-center py-10 text-gray-400">Đang tải...</div> : 
              logs.length === 0 ? <div className="text-center py-10 text-gray-400 bg-gray-50 rounded-lg border border-dashed">Không có dữ liệu.</div> : 
@@ -74,7 +78,7 @@ const HabitHistoryModal = ({ isOpen, onClose, habit }) => {
                     {logs.map(log => (
                         <div key={log.id} className="group flex items-center justify-between p-3 rounded-lg border border-gray-100 hover:bg-gray-50 transition">
                             <div className="flex items-center gap-3">
-                                <div className={`w-1.5 h-10 rounded-full ${
+                                <div className={`w-1.5 h-10 rounded-full shrink-0 ${
                                     log.status === 'COMPLETED' ? 'bg-green-500' : 
                                     log.status === 'PARTIAL' ? 'bg-blue-500' :
                                     log.status === 'SKIPPED' ? 'bg-yellow-500' : 'bg-red-500'
@@ -97,7 +101,7 @@ const HabitHistoryModal = ({ isOpen, onClose, habit }) => {
                                     </span>
                                     {log.value > 0 && <p className="text-xs text-gray-500 mt-1">{log.value} {log.unit || habit.unit}</p>}
                                 </div>
-                                <button onClick={() => handleEditClick(log)} className="p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-full opacity-0 group-hover:opacity-100 transition" title="Sửa log này">
+                                <button onClick={() => handleEditClick(log)} className="p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-full opacity-100 md:opacity-0 md:group-hover:opacity-100 transition" title="Sửa log này">
                                     <Pencil size={16} />
                                 </button>
                             </div>
@@ -106,7 +110,9 @@ const HabitHistoryModal = ({ isOpen, onClose, habit }) => {
                 </div>
             )}
         </div>
-        <div className="mt-4 pt-3 border-t text-center text-xs text-gray-400">Trang {page + 1}</div>
+        
+        {/* Footer */}
+        <div className="mt-4 pt-3 border-t text-center text-xs text-gray-400 shrink-0">Trang {page + 1}</div>
       </div>
 
       <CheckInModal 

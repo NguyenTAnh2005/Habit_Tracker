@@ -15,6 +15,7 @@ const habitApi = {
     return axiosClient.get('/habits/today', { params: { date_str: dateStr } });
   },
 
+
   // Tạo thói quen mới
   createHabit(data) {
     return axiosClient.post('/habits/create', data);
@@ -87,6 +88,53 @@ const habitApi = {
   syncAutoFail(dateStr) {
     return axiosClient.post('/logs/auto-fail', null, { params: { date_str: dateStr } });
   },
+  // Habit lấy dữ liệu heatmap 
+  getHeatmap(year = null, month = null) {
+    return axiosClient.get('logs/stats/heatmap', 
+      { 
+        params: { year, month } 
+      });
+  },
+  // ============================================================
+  // 4. QUẢN LÝ DANH MỤC (ADMIN)
+  // ============================================================
+  createCategory(data) {
+    return axiosClient.post('/categories/create', data);
+  },
+  updateCategory(id, data) {
+    return axiosClient.put(`/categories/${id}`, data);
+  },
+  deleteCategory(id) {
+    return axiosClient.delete(`/categories/${id}`);
+  },
+  
+  // Lấy chi tiết 1 danh mục
+  getCategory(id) {
+    return axiosClient.get(`/categories/${id}`);
+  },
+
+  // ============================================================
+  // 5. QUẢN LÝ MOTIVATION QUOTES (ADMIN + USER VIEW)
+  // ============================================================
+  getAllQuotes(search = '') {
+    return axiosClient.get('/motivation-quotes', { params: { search } });
+  },
+  createQuote(data) {
+    return axiosClient.post('/motivation-quotes/create', data);
+  },
+  updateQuote(id, data) {
+    return axiosClient.put(`/motivation-quotes/${id}`, data);
+  },
+  deleteQuote(id) {
+    return axiosClient.delete(`/motivation-quotes/${id}`);
+  },
+
+  // ============================================================
+  // 6. QUẢN LÝ HABIT (ADMIN VIEW ALL)
+  // ============================================================
+  getAllHabitsAdmin(params) {
+    return axiosClient.get('/habits/all_habit_by_admin', { params });
+  }
 };
 
 export default habitApi;

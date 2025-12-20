@@ -21,6 +21,11 @@ const userApi = {
     return axiosClient.put(`/users/admin/update/${userId}`, data);
   },
 
+  // Lấy chi tiết 1 user (cho Modal Admin)
+  getUser(id) {
+    return axiosClient.get(`/users/${id}`);
+  },
+  
   // [ADMIN] Xóa user
   deleteUser(userId) {
     return axiosClient.delete(`/users/${userId}`);
@@ -28,6 +33,21 @@ const userApi = {
   // Quên mật khẩu - Gửi email chứa mật khẩu mới
   forgotPassword(email) {
     return axiosClient.post('/users/forgot_password', { email });
+  },
+  // API Tạo user mới (Có mật khẩu & quyền)
+  createUserByAdmin(data) {
+    return axiosClient.post('/users/manage_create_user', data);
+  },
+  // --- ROLE (ADMIN QUẢN LÝ) ---
+  // 👇 Thêm nhóm này để quản lý Role và lấy dữ liệu cho Dropdown
+  getAllRoles() {
+    return axiosClient.get('/roles');
+  },
+  createRole(data) {
+    return axiosClient.post('/roles/create', data);
+  },
+  deleteRole(id) {
+    return axiosClient.delete(`/roles/delete/${id}`);
   }
 };
 

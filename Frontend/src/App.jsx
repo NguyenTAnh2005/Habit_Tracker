@@ -6,7 +6,7 @@ import RegisterPage from './pages/RegisterPage';
 import ProfilePage from './pages/ProfilePage';
 import StatsPage from './pages/StatsPage';
 import AdminRoute from './components/AdminRoute';
-import AdminUserPage from './pages/AdminUserPage';
+import AdminPage from './pages/AdminPage';
 import HabitsPage from './pages/HabitPage';
 import ForgotPasswordPage from './pages/ForgotPassWordPage';
 
@@ -36,10 +36,10 @@ function App() {
         <Route path="/habits" element={<PrivateRoute><MainLayout><HabitsPage /></MainLayout></PrivateRoute>} />
         <Route element={<AdminRoute />}> {/* Bọc bằng AdminRoute */}
              <Route 
-                path="/admin/users" 
+                path="/admin/manager" 
                 element={
                     <MainLayout> {/* Vẫn dùng MainLayout để có Sidebar */}
-                        <AdminUserPage />
+                        <AdminPage />
                     </MainLayout>
                 } 
              />

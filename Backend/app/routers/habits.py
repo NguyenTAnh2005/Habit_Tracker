@@ -39,6 +39,9 @@ def get_habits_by_date(
 
     habits_filtered = []
     for habit in all_habits:
+        # Nếu ngày tạo thói quen sau ngày target_date thì bỏ qua
+        if habit.created_at.date() > target_date:
+            continue
         # Logic lọc: Nếu frequency rỗng (làm mỗi ngày) HOẶC frequency chứa thứ của target_date
         if not habit.frequency: 
              habits_filtered.append(habit)

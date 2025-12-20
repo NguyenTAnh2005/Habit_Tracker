@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from fastapi.encoders import jsonable_encoder
 from sqlalchemy.orm import Session
-from app.database.crud import crud_user
+from app.database.crud import crud_user, crud_habit, crud_habit_log
 from app.database import db_connection
 from app.schemas import schemas
 from typing import List, Optional
@@ -9,6 +9,7 @@ from sqlalchemy import or_
 from app.database import models
 from app.core.dependencies import ADMIN_ROLE_ID, get_current_user, get_admin_user
 from app.core.utils import check_password, get_password_hash, generate_random_password, send_email_background
+
 
 # Tạo router cho user
 router = APIRouter(
@@ -58,40 +59,52 @@ def read_user(
         raise HTTPException(status_code=400, detail="User không tồn tại!")
     return user
 
-# API xóa user 
+
+# API xóa user theo ID (Chỉ dành cho Admin)
 @router.delete("/{user_id}")
 def delete_user(
     user_id: int,
     db: Session = Depends(db_connection.get_db),
-    current_user: models.User = Depends(get_current_user)
+    current_user: models.User = Depends(get_admin_user) 
     ):
 
-    # Tìm user cần xóa trước
+    # Tìm user cần xóa
     user_to_delete = crud_user.get_user_by_id(db, user_id=user_id)
     if user_to_delete is None:
         raise HTTPException(status_code=404, detail="User không tồn tại!")
 
-    # LOGIC QUAN TRỌNG:
-    # Cho phép xóa nếu: (Người gọi là Admin) HOẶC (ID người gọi == ID người cần xóa)
-    is_admin = current_user.role_id == ADMIN_ROLE_ID
-    is_owner = current_user.id == user_id
+    # CHECK RULE: Admin không được tự xóa chính mình
+    if current_user.id == user_id:
+        raise HTTPException(
+            status_code=400, 
+            detail="Bạn không thể tự xóa tài khoản Admin của chính mình!"
+        )
 
-    list_admin = crud_user.get_users_by_role(db, role_id=ADMIN_ROLE_ID)
+    # CHECK RULE: Bảo vệ Admin (nếu người bị xóa là Admin)
+    if user_to_delete.role_id == 1:
+        # Tổng số Admin đang có
+        admin_count = db.query(models.User).filter(models.User.role_id == 1).count()
+        
+        # Nếu chỉ còn 1 Admin (là chính mình) thì chặn (logic trên đã chặn rồi)
+        # Nhưng nếu còn 2 Admin, A xóa B -> còn 1 Admin -> OK
+        # Tuy nhiên, để an toàn tuyệt đối, có thể chặn xóa Admin cuối cùng
+        if admin_count <= 1:
+             raise HTTPException(
+                status_code=400, 
+                detail="Hệ thống phải có ít nhất 1 Admin. Không thể xóa!"
+            )
 
-    if not is_admin and not is_owner:
-        raise HTTPException(status_code=403, detail="Bạn không có quyền xóa tài khoản của người khác!")
-    
-    # Ngăn không cho xóa Admin cuối cùng
-    if is_owner and user_to_delete.role_id == ADMIN_ROLE_ID and len(list_admin) <= 1:
-        raise HTTPException(status_code=403, detail="Hệ thống phải có ít nhất 1 Admin. Vui lòng liên hệ Admin khác để xóa tài khoản này!")
-    
+    # Lưu dữ liệu ra biến riêng TRƯỚC KHI XÓA (để return không bị lỗi)
+    deleted_user_info = jsonable_encoder(user_to_delete)
+
+    # Thực hiện xóa
     crud_user.delete_user_by_id(db=db, user_id=user_id)
     
+    # Trả về kết quả
     return {
         "message": f"Đã xóa thành công user id {user_id}",
-        "user": jsonable_encoder(user_to_delete)
+        "user": deleted_user_info 
     }
-
 # API cập nhật thông tin user 
 @router.put("/me", response_model=schemas.UserResponse)
 def update_user_me(
@@ -191,7 +204,7 @@ def read_users(
 @router.put("/admin/update/{user_id}", response_model=schemas.UserResponse)
 def update_user_by_admin(
     user_id: int, 
-    user_update: schemas.UserCreatedByAdmin, # Dùng schema này vì nó có chứa field role_id
+    user_update: schemas.UserUpdateByAdmin,
     db: Session = Depends(db_connection.get_db),
     current_user: models.User = Depends(get_admin_user)
 ):
@@ -199,7 +212,13 @@ def update_user_by_admin(
     db_user = crud_user.get_user_by_id(db, user_id)
     if not db_user:
         raise HTTPException(status_code=404, detail="User không tồn tại")
-    
+    # Admin không thể tự hạ quyền của mình
+    if user_id == current_user.id:
+        if user_update.role_id and user_update.role_id != 1:
+            raise HTTPException(
+                status_code=400, 
+                detail="Bạn không thể tự hạ quyền Admin của chính mình. Hãy nhờ Admin khác làm điều này!"
+            )
     # Update thủ công các trường Admin gửi lên
     # Lưu ý: Cần cẩn thận logic nếu update password ở đây (cần hash lại)
     # Ở đây mình ví dụ update thông tin cơ bản

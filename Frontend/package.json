@@ -14,9 +14,11 @@
     "clsx": "^2.1.1",
     "lucide-react": "^0.561.0",
     "react": "^19.2.0",
+    "react-calendar-heatmap": "^1.10.0",
     "react-dom": "^19.2.0",
     "react-router-dom": "^7.10.1",
     "react-toastify": "^11.0.5",
+    "react-tooltip": "^5.30.0",
     "recharts": "^3.6.0",
     "tailwind-merge": "^3.4.0"
   },

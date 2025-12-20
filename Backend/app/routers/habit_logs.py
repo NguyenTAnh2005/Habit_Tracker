@@ -8,6 +8,8 @@ from app.schemas import schemas
 from app.database.crud import crud_habit_log, crud_habit
 from app.core.dependencies import get_current_user, get_admin_user
 from datetime import date, datetime, timedelta
+from calendar import monthrange
+from collections import defaultdict
 
 
 router = APIRouter(
@@ -16,101 +18,107 @@ router = APIRouter(
 )
 
 
-# Check-in
+# =================================================================
+# API CHECK-IN THÓI QUEN 
+# =================================================================
 @router.post("/", response_model=schemas.HabitLogResponse)
 def check_in_habit(
     log: schemas.HabitLogCreate,
-      db: Session = Depends(db_connection.get_db),
-      current_user: models.User = Depends(get_current_user)
-      ):
-    
-    # Lấy thông tin Habit từ ID gửi lên
-    habit = crud_habit.get_habit_by_id(db, log.habit_id)
-    
-    # Kiểm tra tồn tại
-    if not habit:
-        raise HTTPException(status_code = 404, detail = "Thói quen không tồn tại")
-        
-    # Kiểm tra CHÍNH CHỦ (Quan trọng nhất)
-    if habit.user_id != current_user.id:
+    db: Session = Depends(db_connection.get_db),
+    current_user: models.User = Depends(get_current_user)
+):
+    # Chặn check-in ngày tương lai
+    today = datetime.now().date()
+    if log.record_date > today:
         raise HTTPException(
-            status_code = status.HTTP_403_FORBIDDEN, 
-            detail = "Bạn không thể check-in giùm thói quen của người khác!"
+            status_code=400, 
+            detail=f"Không thể check-in cho tương lai! Hôm nay là {today}"
         )
 
-    # Nếu đúng là của mình thì mới cho check-in
+    # Lấy thông tin Habit
+    habit = crud_habit.get_habit_by_id(db, log.habit_id)
+    if not habit:
+        raise HTTPException(status_code=404, detail="Thói quen không tồn tại")
+        
+    # Kiểm tra CHÍNH CHỦ (Admin cũng không được check-in giùm để đảm bảo tính trung thực)
+    if habit.user_id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, 
+            detail="Bạn chỉ có thể check-in thói quen của chính mình!"
+        )
+    
+    # Kiểm tra ngày tạo (Không thể check-in cho ngày trước khi Habit được tạo)
+    if log.record_date < habit.created_at.date():
+         raise HTTPException(
+            status_code=400, 
+            detail=f"Thói quen này được tạo ngày {habit.created_at.date()}. Không thể check-in cho quá khứ trước đó!"
+        )
+
+    # Lưu Log
     return crud_habit_log.create_or_update_habit_log(db=db, log=log)
 
 
-# Xem lịch sử của 1 thói quen (chính chủ hoặc admin)
+# =================================================================
+# API XEM LỊCH SỬ (HISTORY)
+# =================================================================
 @router.get("/habit/{habit_id}", response_model=List[schemas.HabitLogResponse])
 def get_history_by_habit(
     habit_id: int, 
     skip: int = 0, 
     limit: int = 30,
-    from_date: Optional[date] = None, # <--- Nhận tham số từ Query
-    to_date: Optional[date] = None,   # <--- Nhận tham số từ Query
+    from_date: Optional[date] = None,
+    to_date: Optional[date] = None,
     db: Session = Depends(db_connection.get_db),
     current_user: models.User = Depends(get_current_user)
 ):
-    # Lấy thông tin Habit
     habit = crud_habit.get_habit_by_id(db, habit_id)
-    
     if not habit:
-        raise HTTPException(status_code = 404, detail = "Thói quen không tồn tại")
+        raise HTTPException(status_code=404, detail="Thói quen không tồn tại")
         
-    # Kiểm tra CHÍNH CHỦ hoặc ADMIN
-    if habit.user_id != current_user.id and current_user.role_id != 1:
+    # Cho phép chỉ chủ sở hữu xem lịch sử thói quen
+    if habit.user_id != current_user.id:
         raise HTTPException(
-            status_code = status.HTTP_403_FORBIDDEN, 
-            detail = "Bạn không có quyền xem lịch sử thói quen này!"
+            status_code=status.HTTP_403_FORBIDDEN, 
+            detail="Bạn không có quyền xem lịch sử thói quen này!"
         )
 
-    # Gọi CRUD mới đã update
     return crud_habit_log.get_logs_by_habit(
-        db, 
-        habit_id=habit_id, 
-        skip=skip, 
-        limit=limit,
-        from_date=from_date,
-        to_date=to_date
+        db, habit_id=habit_id, skip=skip, limit=limit, 
+        from_date=from_date, to_date=to_date
     )
 
 
-# 3. Xem tất cả log của User 
+# =================================================================
+# API XEM TẤT CẢ LOG CỦA USER (CHO MÀN HÌNH STATS)
+# =================================================================
 @router.get("/user/history", response_model=List[schemas.HabitLogUserResponse]) 
 def get_all_logs_by_user(
     skip: int = 0, 
     limit: int = 100, 
-    from_date: Optional[date] = None, # <--- Ngày bắt đầu
-    to_date: Optional[date] = None,   # <--- Ngày kết thúc
-    habit_id: Optional[int] = None,   # <--- Lọc riêng 1 habit
+    from_date: Optional[date] = None,
+    to_date: Optional[date] = None,
+    habit_id: Optional[int] = None,
     db: Session = Depends(db_connection.get_db),
     current_user: models.User = Depends(get_current_user)
 ):
-    # Join bảng Habit để chắc chắn lấy log của đúng user này
     query = db.query(models.HabitLog).join(models.Habit).filter(
         models.Habit.user_id == current_user.id
     )
 
-    # 1. Lọc theo khoảng thời gian
     if from_date:
         query = query.filter(models.HabitLog.record_date >= from_date)
     if to_date:
         query = query.filter(models.HabitLog.record_date <= to_date)
-    
-    # 2. Lọc theo habit cụ thể (nếu user chọn filter dropdown)
     if habit_id:
         query = query.filter(models.HabitLog.habit_id == habit_id)
 
-    # Sắp xếp ngày giảm dần (mới nhất lên đầu)
     query = query.order_by(models.HabitLog.record_date.desc())
-
     logs = query.offset(skip).limit(limit).all()
+    
+    # Map dữ liệu thủ công để đảm bảo frontend nhận đủ info
     result = []
     for log in logs:
-        # Lấy các trường cơ bản từ log
-        item = {
+        result.append({
             "id": log.id,
             "habit_id": log.habit_id,
             "value": log.value,
@@ -119,77 +127,62 @@ def get_all_logs_by_user(
             "record_date": log.record_date,
             "created_at": log.created_at,
             "habit_name": log.habit.name if log.habit else "Đã xóa"
-        }
-        result.append(item)
+        })
     return result
 
-# 4. [ADMIN] Xem toàn bộ
-@router.get("/admin/all", response_model=List[schemas.HabitLogAdminResponse])
-def get_all_logs_system(
-    skip: int = 0, limit: int = 100, 
-    db: Session = Depends(db_connection.get_db),
-    current_user: models.User = Depends(get_admin_user)
-    ):
-    return crud_habit_log.get_all_logs_for_admin(db = db, skip = skip, limit = limit)
 
-
-# 5. Update Log
+# =================================================================
+#  API UPDATE (SỬA NHẬT KÝ)
+# =================================================================
 @router.put("/update/{log_id}")
 def update_log_detail(
     log_id: int, 
     log_update: schemas.HabitLogUpdate,
-      db: Session = Depends(db_connection.get_db),
-      current_user: models.User = Depends(get_current_user)
-      ):
-    # Tìm cái log cần sửa
+    db: Session = Depends(db_connection.get_db),
+    current_user: models.User = Depends(get_current_user)
+):
     db_log = crud_habit_log.get_log_by_id(db, log_id)
     if not db_log:
         raise HTTPException(status_code=404, detail="Log không tồn tại")
     
-    # Từ cái log -> Tìm ra Habit cha của nó
     habit = crud_habit.get_habit_by_id(db, db_log.habit_id)
-    
-    # Kiểm tra xem Habit cha có phải của user đang login không
     if not habit or habit.user_id != current_user.id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN, 
-            detail="Bạn không có quyền sửa nhật ký này!"
-        )
+        raise HTTPException(status_code=403, detail="Bạn không có quyền sửa nhật ký này!")
 
-    # Update
+    # Cũng chặn sửa ngày thành tương lai
+    if log_update.record_date and log_update.record_date > datetime.now().date():
+         raise HTTPException(status_code=400, detail="Không thể chuyển nhật ký sang ngày tương lai!")
+
     updated_log = crud_habit_log.update_habit_log(db, log_id=log_id, log_update=log_update)
-    return {
-        "message": f"Cập nhật log {log_id} thành công", 
-        "log": jsonable_encoder(updated_log)
-    }
+    return {"message": "Cập nhật thành công", "log": jsonable_encoder(updated_log)}
 
 
-# 6. Delete Log
+
+# =================================================================
+# API DELETE LOG (XÓA NHẬT KÝ)
+# =================================================================
 @router.delete("/{log_id}")
 def delete_log(
     log_id: int, 
     db: Session = Depends(db_connection.get_db),
     current_user: models.User = Depends(get_current_user)
-    ):
-    # Tìm log
+):
     db_log = crud_habit_log.get_log_by_id(db, log_id)
     if not db_log:
         raise HTTPException(status_code=404, detail="Log không tồn tại")
         
-    # Check quyền sở hữu (Log -> Habit -> User)
     habit = crud_habit.get_habit_by_id(db, db_log.habit_id)
     if not habit or habit.user_id != current_user.id:
         raise HTTPException(status_code=403, detail="Bạn không có quyền xóa nhật ký này!")
 
-    # Xóa
     crud_habit_log.delete_habit_log(db, log_id=log_id)
-    return {
-        "message": "Xóa log thành công", 
-        "log": jsonable_encoder(db_log)
-    }
+    return {"message": "Xóa log thành công", "log": jsonable_encoder(db_log)}
 
 
-# 7. Thống kê hoàn thành thói quen trong ngày hôm nay (Dành cho User)
+
+# =================================================================
+# API THỐNG KÊ TỈ LỆ HOÀN THÀNH NGÀY
+# =================================================================
 @router.get("/stats/today") 
 def get_daily_stats_overall(
     date_str: Optional[date] = None,
@@ -198,52 +191,55 @@ def get_daily_stats_overall(
 ):
     """
     Tính % hoàn thành ngày.
-    QUY TẮC NGHIÊM NGẶT:
-    - Chỉ tính COMPLETED là 1.
-    - PARTIAL, SKIPPED, FAILED đều là 0.
+    Logic: Chỉ tính những Habit đã tồn tại vào ngày target_date.
     """
     target_date = date_str if date_str else (datetime.now()).date()
-    weekday_int = target_date.weekday() + 2
-    
-    # 1. Lấy tất cả Habit
+    weekday_int = target_date.weekday() + 2 # (2=T2 ... 8=CN)
+
+    # Lấy tất cả habit 
     all_habits = crud_habit.get_habits_by_user(db, user_id=current_user.id, limit=9999)
-    
-    # 2. Lọc Habit cần làm hôm nay
+
+    # Lọc ra các Habit cần làm hôm đó
     habits_today = []
     for h in all_habits:
-        if not h.frequency: 
-             habits_today.append(h)
-        elif str(weekday_int) in str(h.frequency): 
+        # Chỉ lấy các habit đã được tạo ở đúng thời điểm
+        # habit đã tạo trước mới hiển hị ở ngày đó
+        if h.created_at.date() > target_date:
+            continue
+
+        # kiểm tra lịch đã lên của habit với ngày trong tuần của Target date
+        if not h.frequency: # Empty = Mỗi ngày
             habits_today.append(h)
-            
+        elif isinstance(h.frequency, list) and weekday_int in h.frequency:
+            habits_today.append(h)
+        elif isinstance(h.frequency, str) and str(weekday_int) in h.frequency: # Fallback nếu DB lưu string
+            habits_today.append(h)
+    
+    # Nếu không có habit nào hôm đó
     if not habits_today:
         return {
             "date": target_date,
-            "total_assigned": 0,
-            "completed_count": 0,
-            "daily_rate": 0.0
+            "total_habits": 0,
+            "completed_habits": 0,
+            "completion_rate": 0.0
         }
 
-    # 3. Lấy log COMPLETED hôm nay
+    # Lấy log hoàn thành trong ngày
     habit_ids_today = [h.id for h in habits_today]
-    
-    # Chỉ query những cái status là COMPLETED
+
     completed_logs = db.query(models.HabitLog).filter(
         models.HabitLog.habit_id.in_(habit_ids_today),
         models.HabitLog.record_date == target_date,
-        models.HabitLog.status == "COMPLETED" # <--- CHỈ LẤY CÁI NÀY
+        models.HabitLog.status == "COMPLETED"
     ).all()
-    
-    # Đếm số lượng habit đã hoàn thành (Dùng set để tránh log trùng)
+
+    # Dùng set để tránh trùng lặp habit_id
     unique_completed_habits = set([log.habit_id for log in completed_logs])
     completed_count = len(unique_completed_habits)
-
-    # 4. Tính toán %
     total_assigned = len(habits_today)
-    
-    # Công thức thuần túy: (Số lượng Hoàn thành / Tổng số phải làm) * 100
     rate = (completed_count / total_assigned) * 100 if total_assigned > 0 else 0.0
-    
+    rate = round(rate, 2)
+
     return {
         "date": target_date,
         "total_assigned": total_assigned,
@@ -252,7 +248,9 @@ def get_daily_stats_overall(
     }
 
 
-# 8. Lấy tất cả log trong ngày hôm nay của user (Dành cho Dashboard)
+# =================================================================
+# API LẤY LOG TRONG NGÀY (HỖ TRỢ TRÊN UI)
+# =================================================================
 @router.get("/today", response_model=List[schemas.HabitLogResponse])
 def get_logs_by_date(
     date_str: Optional[date] = None,
@@ -260,81 +258,83 @@ def get_logs_by_date(
     current_user: models.User = Depends(get_current_user)
 ):
     """
-    API trả về danh sách các lần check-in trong ngày hôm nay của User.
-    Dùng để Frontend biết habit nào đã làm xong để tô màu xanh.
+    API trả về danh sách các lần check-in trong ngày cụ thể.
     """
     target_date = date_str if date_str else (datetime.now()).date()
     
-    # Query bảng HabitLog, join với Habit để lọc đúng User
+    # Query bảng HabitLog, join với Habit để lọc theo user_id
     todays_logs = db.query(models.HabitLog)\
         .join(models.Habit, models.HabitLog.habit_id == models.Habit.id)\
         .filter(
-            models.Habit.user_id == current_user.id, # Của chính user này
-            models.HabitLog.record_date == target_date      # Và phải là hôm nay
+            models.Habit.user_id == current_user.id, 
+            models.HabitLog.record_date == target_date   # Log của ngày đó
         ).all()
         
     return todays_logs
 
 
-# 9. API Tự động điền FAILED cho các ngày quên trong quá khứ (Tối đa 7 ngày)
+# =================================================================
+# API TỰ ĐỘNG ĐIỀN FAILED CHO NHỮNG THÓI QUEN KHÔNG ĐƯỢC CHECK-IN
+# =================================================================
 @router.post("/auto-fail")
 def auto_mark_failed_logs(
-    date_str: Optional[date] = None, # Ngày hiện tại (để tính lùi về quá khứ)
+    date_str: Optional[date] = None,
     db: Session = Depends(db_connection.get_db),
     current_user: models.User = Depends(get_current_user)
 ):
-    # 1. Xác định mốc thời gian
-    # Lấy ngày hiện tại (hoặc ngày client gửi) làm mốc
     current_date = date_str if date_str else datetime.now().date()
-    
-    # 2. Lấy tất cả Habit của User
     all_habits = crud_habit.get_habits_by_user(db, user_id=current_user.id, limit=9999)
+    
     if not all_habits:
-        return {"message": "No habits to check"}
+        return {"message": "User chưa có thói quen nào"}
 
     logs_added = 0
     
-    # 3. Quét lùi về quá khứ 7 ngày (Không tính hôm nay)
+    # Quét 7 ngày quá khứ
     for i in range(1, 8): 
         check_date = current_date - timedelta(days=i)
+        weekday_int = check_date.weekday() + 2 # (2=T2 ... 8=CN)
         
-        # Tính thứ của ngày đang check (2=T2 ... 8=CN)
-        weekday_int = check_date.weekday() + 2
+        habits_need_log = []
         
-        # Lọc ra những habit LẼ RA PHẢI LÀM trong ngày check_date
-        habits_for_day = []
         for h in all_habits:
-            # Nếu frequency rỗng (làm mỗi ngày) HOẶC frequency chứa thứ của check_date
-            if not h.frequency:
-                habits_for_day.append(h)
-            elif str(weekday_int) in str(h.frequency): # Check string cho an toàn
-                habits_for_day.append(h)
+            # Chỉ xét nếu Habit đã được tạo ra TẠI hoặc TRƯỚC ngày check_date
+            if h.created_at.date() > check_date:
+                continue # Habit chưa sinh ra vào ngày này -> Bỏ qua
+
+            # Check lịch (Frequency)
+            is_scheduled = False
+            if not h.frequency: # Empty = Mỗi ngày
+                is_scheduled = True
+            elif isinstance(h.frequency, list) and weekday_int in h.frequency:
+                is_scheduled = True
+            elif isinstance(h.frequency, str) and str(weekday_int) in h.frequency: # Fallback nếu DB lưu string
+                is_scheduled = True
+            
+            if is_scheduled:
+                habits_need_log.append(h)
         
-        # Nếu ngày đó không có lịch gì thì bỏ qua
-        if not habits_for_day:
+        if not habits_need_log:
             continue
 
-        # Lấy danh sách ID của habit cần làm
-        habit_ids = [h.id for h in habits_for_day]
+        habit_ids = [h.id for h in habits_need_log]
 
-        # 4. Tìm xem những habit này đã có log trong ngày check_date chưa? ==> trả về danh sách log => làm 1 túi riêng chứa id của những habit đã có log
+        # Tìm log đã tồn tại
         existing_logs = db.query(models.HabitLog).filter(
             models.HabitLog.habit_id.in_(habit_ids),
             models.HabitLog.record_date == check_date
         ).all()
         
-        # Tạo set các habit_id đã có - chừa ra những cái đã có checkin <có log> --> Miễn ktra
-        done_habit_ids = set([log.habit_id for log in existing_logs])
+        done_ids = {log.habit_id for log in existing_logs}
         
-        # 5. Tìm những habit CHƯA CÓ LOG -> Điền FAILED
-        for habit in habits_for_day:
-            if habit.id not in done_habit_ids:
-                # Tạo log FAILED
+        # Điền FAILED cho những cái chưa có log
+        for h in habits_need_log:
+            if h.id not in done_ids:
                 failed_log = models.HabitLog(
-                    habit_id = habit.id,
-                    record_date = check_date,
-                    status = "FAILED",
-                    value = 0
+                    habit_id=h.id,
+                    record_date=check_date,
+                    status="FAILED",
+                    value=0
                 )
                 db.add(failed_log)
                 logs_added += 1
@@ -342,4 +342,101 @@ def auto_mark_failed_logs(
     if logs_added > 0:
         db.commit()
         
-    return {"message": "Tự động điền FAILED cho các ngày quên trong quá khứ", "Số lượng đã điền": logs_added}
+    return {"message": "Đã chạy auto-fail", "logs_added": logs_added}
+
+# =================================================================
+# API HEATMAP THỐNG KÊ HOÀN THÀNH THÓI QUEN THEO THÁNG
+# =================================================================
+@router.get("/stats/heatmap")
+def get_monthly_heatmap_stats(
+    year: Optional[int] = None,
+    month: Optional[int] = None,
+    db: Session = Depends(db_connection.get_db),
+    current_user: models.User = Depends(get_current_user)
+):
+    now = datetime.now()
+    target_year = year if year else now.year
+    target_month = month if month else now.month
+
+    try:
+        days_in_month = monthrange(target_year, target_month)[1]
+        start_date = date(target_year, target_month, 1)
+        end_date = date(target_year, target_month, days_in_month)
+    except:
+        raise HTTPException(status_code=400, detail="Ngày tháng không hợp lệ")
+    
+    all_habit = crud_habit.get_habits_by_user(db, user_id=current_user.id, limit=9999)
+    
+    # Lấy Logs trong tháng
+    logs = db.query(models.HabitLog).join(models.Habit).filter(
+        models.Habit.user_id == current_user.id,
+        models.HabitLog.record_date >= start_date,
+        models.HabitLog.record_date <= end_date,
+        models.HabitLog.status == "COMPLETED" # Chỉ tính completed cho heatmap
+    ).all()
+
+    logs_map = defaultdict(set)
+    for log in logs:
+        logs_map[log.record_date].add(log.habit_id)
+
+    heatmap_data = []
+    current = start_date
+    
+    # Loop qua từng ngày trong tháng
+    while current <= end_date:
+        # Nếu ngày đang xét là tương lai -> Bỏ qua không tính toán
+        if current > now.date():
+             # Option: Trả về data rỗng để render ô trống
+             heatmap_data.append({
+                "date": current, "total": 0, "completed": 0, "rate": 0, "level": 0
+            })
+             current += timedelta(days=1)
+             continue
+
+        weekday_int = current.weekday() + 2
+        total_task_in_day = 0
+        
+        for h in all_habit:
+            # Chỉ tính habit nếu nó ĐÃ TỒN TẠI vào ngày 'current'
+            if h.created_at.date() > current:
+                continue 
+
+            # Check lịch
+            is_scheduled = False
+            if not h.frequency:
+                is_scheduled = True
+            elif isinstance(h.frequency, list) and weekday_int in h.frequency:
+                is_scheduled = True
+            
+            if is_scheduled:
+                total_task_in_day += 1
+        
+        completed_count = 0
+        rate = 0.0
+        level = 0
+
+        if total_task_in_day > 0:
+            completed_count = len(logs_map.get(current, []))
+            rate = round((completed_count / total_task_in_day) * 100, 2)
+            
+            if rate == 0: level = 0
+            elif rate < 40: level = 1
+            elif rate < 65: level = 2
+            elif rate < 80: level = 3
+            else: level = 4
+            
+        heatmap_data.append({
+            "date": current,
+            "total": total_task_in_day,
+            "completed": completed_count,
+            "rate": rate,
+            "level": level
+        })
+
+        current += timedelta(days=1)
+        
+    return heatmap_data
+        
+            
+
+
