@@ -18,7 +18,7 @@ def create_motivation_quote(db: Session, quote: schemas.MotivationQuoteCreate):
 
 # Lấy tất cả Motivation Quotes
 def get_all_motivation_quotes(db: Session):
-    return db.query(models.MotivationQuote).all()
+    return db.query(models.MotivationQuote).order_by(models.MotivationQuote.id).all()
 
 
 # Lấy Motivation Quote theo ID

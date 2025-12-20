@@ -95,7 +95,7 @@ class HabitLog(Base):
 
 # --- BẢNG MOTIVATION QUOTE (Đã sửa tên Class) ---
 class MotivationQuote(Base):
-    __tablename__ = "motivational_quotes"
+    __tablename__ = "motivation_quotes"
 
     id = Column(Integer, primary_key=True, index=True)
     quote = Column(String, nullable=False)

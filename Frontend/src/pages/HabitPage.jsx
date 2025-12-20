@@ -9,11 +9,9 @@ const HabitsPage = () => {
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   
-  // Filters
   const [search, setSearch] = useState('');
   const [selectedCat, setSelectedCat] = useState('');
 
-  // Modals
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingHabit, setEditingHabit] = useState(null);
   const [historyHabit, setHistoryHabit] = useState(null);
@@ -73,21 +71,23 @@ const HabitsPage = () => {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col md:flex-row justify-between items-center gap-4">
+    <div className="space-y-6 pb-20">
+      {/* Header & Button */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <h1 className="text-2xl font-bold text-gray-900">Quản lý Thói Quen</h1>
-        <button onClick={openCreate} className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition">
+        <button onClick={openCreate} className="w-full md:w-auto flex items-center justify-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition">
           <Plus size={20} /> Tạo mới
         </button>
       </div>
 
-      <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex flex-wrap gap-4">
-        <div className="flex-1 relative min-w-[200px]">
+      {/* Filter Bar */}
+      <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex flex-col md:flex-row gap-4">
+        <div className="flex-1 relative">
           <Search className="absolute left-3 top-2.5 text-gray-400 h-5 w-5"/>
           <input type="text" placeholder="Tìm tên thói quen..." className="w-full pl-10 pr-4 py-2 border rounded-lg outline-none focus:ring-2 focus:ring-indigo-500"
             value={search} onChange={e => setSearch(e.target.value)} />
         </div>
-        <div className="relative min-w-[150px]">
+        <div className="relative md:w-48">
           <Filter className="absolute left-3 top-2.5 text-gray-400 h-5 w-5"/>
           <select className="w-full pl-10 pr-4 py-2 border rounded-lg outline-none focus:ring-2 focus:ring-indigo-500 appearance-none bg-white"
             value={selectedCat} onChange={e => setSelectedCat(e.target.value)}>
@@ -97,12 +97,13 @@ const HabitsPage = () => {
         </div>
       </div>
 
+      {/* Grid List */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {loading ? <p>Đang tải...</p> : habits.length === 0 ? <p className="text-gray-500">Không tìm thấy thói quen nào.</p> : 
           habits.map(habit => (
             <div key={habit.id} className="bg-white p-5 rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition">
               <div className="flex justify-between items-start mb-2">
-                <div className="px-3 py-1 rounded-full text-xs font-bold" style={{backgroundColor: habit.color + '20', color: habit.color}}>
+                <div className="px-3 py-1 rounded-full text-xs font-bold truncate max-w-[50%]" style={{backgroundColor: habit.color + '20', color: habit.color}}>
                   {categories.find(c => c.id === habit.category_id)?.name || 'Chung'}
                 </div>
                 
@@ -115,12 +116,12 @@ const HabitsPage = () => {
                 </div>
               </div>
               
-              <h3 className="text-lg font-bold text-gray-800 mb-1">{habit.name}</h3>
+              <h3 className="text-lg font-bold text-gray-800 mb-1 truncate">{habit.name}</h3>
               <p className="text-sm text-gray-500 line-clamp-2 min-h-[40px]">{habit.desc || "Không có mô tả"}</p>
               
               <div className="mt-4 pt-4 border-t border-gray-50 flex flex-col gap-2 text-sm text-gray-600">
                 <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2"><CalendarDays size={16} className="text-indigo-500"/><span>{formatFreq(habit.frequency)}</span></div>
+                    <div className="flex items-center gap-2 max-w-[60%]"><CalendarDays size={16} className="text-indigo-500 shrink-0"/><span className="truncate">{formatFreq(habit.frequency)}</span></div>
                     <div className="flex items-center gap-1 text-orange-500 bg-orange-50 px-2 py-1 rounded-lg font-bold" title="Chuỗi liên tục hiện tại">
                         <Flame size={16} fill="currentColor" /><span>{habit.streak || 0}</span>
                     </div>

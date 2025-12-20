@@ -42,3 +42,13 @@ def update_category(db: Session, category_id: int, category_update: schemas.Habi
     db.commit()
     db.refresh(db_category)
     return db_category
+
+# Xóa Category
+def delete_category(db: Session, category_id: int):
+    db_category = get_category(db, category_id)
+    if not db_category:
+        return None
+
+    db.delete(db_category)
+    db.commit()
+    return db_category

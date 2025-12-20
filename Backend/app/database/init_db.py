@@ -42,7 +42,7 @@ def seed_data():
         # PHẦN 3: TẠO QUOTES (CÂU NÓI ĐỘNG LỰC)
         # ====================================================
         quotes_data = [
-            {"quote": "Hành trình vạn dặm bắt đầu từ một bước chân.", "author": "Lão Tử"},
+            {"quote": "Không có việc gì khó. Chỉ sợ lòng không bền. Đào núi và lấp biển. Quyết chí ắt làm nên", "author": "Hồ Chí Minh"},
             {"quote": "Không bao giờ là quá muộn để trở thành người bạn muốn.", "author": "George Eliot"},
             {"quote": "Kỷ luật là cầu nối giữa mục tiêu và thành tựu.", "author": "Jim Rohn"},
             {"quote": "Cách tốt nhất để dự đoán tương lai là tạo ra nó.", "author": "Abraham Lincoln"},
@@ -79,6 +79,7 @@ def seed_data():
         
         if not test_user:
             print("[SEED] Creating Test User with Habits & Logs...")
+            
             # Tạo User
             test_user = models.User(
                 email=test_email,
@@ -91,31 +92,34 @@ def seed_data():
             db.commit()
             db.refresh(test_user)
 
-            # Tạo Habits cho User này
-            # Lưu ý: Category ID (1=Sức khỏe, 2=Học tập...) dựa trên thứ tự insert bên trên
+            # 👇 ĐỊNH NGHĨA NGÀY TẠO QUÁ KHỨ (25/10 năm nay)
+            current_year = datetime.now().year
+            # Tạo ngày 25/10 lúc 00:00:00
+            past_created_at = datetime(current_year, 10, 25, 0, 0, 0)
+
             habits_data = [
                 {
                     "name": "Uống 2 lít nước", 
                     "category_id": 1, 
-                    "frequency": [2,3,4,5,6,7,8], # <--- Sửa thành 2-8 (Mỗi ngày)
+                    "frequency": [2,3,4,5,6,7,8], 
                     "unit": "ml", "target_value": 2000, "color": "#3498db"
                 },
                 {
                     "name": "Chạy bộ buổi sáng", 
                     "category_id": 1, 
-                    "frequency": [2, 4, 6, 8],    # <--- T2, T4, T6, CN (Thứ 8)
+                    "frequency": [2, 4, 6, 8],    
                     "unit": "km", "target_value": 5, "color": "#e74c3c"
                 },
                 {
                     "name": "Đọc sách 30p", 
                     "category_id": 2, 
-                    "frequency": [2,3,4,5,6,7,8], # <--- Mỗi ngày
+                    "frequency": [2,3,4,5,6,7,8], 
                     "unit": "phút", "target_value": 30, "color": "#f1c40f"
                 },
                 {
                     "name": "Học từ vựng T.Anh", 
                     "category_id": 2, 
-                    "frequency": [3, 5, 7],       # <--- T3, T5, T7
+                    "frequency": [3, 5, 7],       
                     "unit": "từ", "target_value": 10, "color": "#9b59b6"
                 }
             ]
@@ -130,13 +134,13 @@ def seed_data():
                     frequency=h["frequency"],
                     unit=h["unit"],
                     target_value=h["target_value"],
-                    color=h["color"]
+                    color=h["color"],
+                    created_at=past_created_at # 👈 ÉP NGÀY TẠO VỀ QUÁ KHỨ
                 )
                 db.add(habit)
                 created_habits.append(habit)
             
             db.commit()
-            # Refresh để lấy ID của habit
             for h in created_habits: db.refresh(h)
 
             # Tạo LOGS giả trong 30 ngày qua (Để vẽ biểu đồ)
@@ -149,23 +153,31 @@ def seed_data():
 
                 for habit in created_habits:
                     # Kiểm tra xem hôm đó có lịch tập không
-                    # frequency trong DB lưu dạng List[int]
                     if weekday in habit.frequency:
-                        # Random trạng thái check-in cho tự nhiên
                         rand = random.random()
                         
                         status = "SKIPPED"
                         val = 0
                         
-                        if rand < 0.7: # 70% là hoàn thành
+                        # Logic kiểm tra định lượng
+                        has_target = habit.target_value and habit.target_value > 0
+
+                        if rand < 0.7: # 70% là HOÀN THÀNH
                             status = "COMPLETED"
-                            val = habit.target_value
-                        elif rand < 0.85: # 15% là thất bại (làm nhưng ko đủ)
+                            # Nếu có target thì lấy target, ko thì lấy 1 (boolean)
+                            val = habit.target_value if has_target else 1.0
+                            
+                        elif rand < 0.85: # 15% là THẤT BẠI
                             status = "FAILED"
-                            val = habit.target_value / 2
-                        else: # 15% là quên làm (SKIPPED)
+                            # 👇 LOGIC MỚI BẠN YÊU CẦU:
+                            if has_target:
+                                val = 0.0 # Có định lượng -> 0
+                            else:
+                                val = None # Không định lượng -> Null
+                                
+                        else: # 15% là BỎ QUA (SKIPPED)
                             status = "SKIPPED"
-                            val = 0
+                            val = None # Skipped nên để None hoặc 0 tùy logic, ở đây để None cho sạch
                         
                         # Tạo log
                         log = models.HabitLog(

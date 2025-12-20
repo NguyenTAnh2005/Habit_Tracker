@@ -1,37 +1,50 @@
 import { useState, useEffect } from 'react';
 import { 
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, 
   PieChart, Pie, Cell, Legend 
 } from 'recharts';
-import { Calendar, Filter, PieChart as PieChartIcon } from 'lucide-react';
+import { Calendar, Filter, PieChart as PieChartIcon, Activity } from 'lucide-react';
 import habitApi from '../api/habitAPI';
+import CalendarHeatmap from 'react-calendar-heatmap';
+import 'react-calendar-heatmap/dist/styles.css';
+import { Tooltip } from 'react-tooltip';
+import 'react-tooltip/dist/react-tooltip.css';
 
 const StatsPage = () => {
   const [logs, setLogs] = useState([]);
   const [chartData, setChartData] = useState([]);
   const [pieData, setPieData] = useState([]);
+  const [heatmapData, setHeatmapData] = useState([]);
+  const [selectedDate, setSelectedDate] = useState(new Date()); 
   const [loading, setLoading] = useState(true);
-  const [range, setRange] = useState(7); // Mặc định xem 7 ngày qua
-
-  // 👇 MÀU SẮC: Thêm màu Xanh Dương (#3B82F6) cho Partial
-  const COLORS = ['#10B981', '#3B82F6', '#F59E0B', '#EF4444']; 
-  // Thứ tự: [Hoàn thành, Một phần, Bỏ qua, Thất bại]
 
   useEffect(() => {
-    const fetchData = async () => {
+    const fetchAllStats = async () => {
       setLoading(true);
       try {
-        const endDate = new Date();
-        const startDate = new Date();
-        startDate.setDate(endDate.getDate() - range + 1);
+        const year = selectedDate.getFullYear();
+        const month = selectedDate.getMonth() + 1; 
 
-        const res = await habitApi.getHistory({
-          from_date: startDate.toISOString().split('T')[0],
-          to_date: endDate.toISOString().split('T')[0]
-        });
+        const startDate = new Date(year, month - 1, 1);
+        const endDate = new Date(year, month, 0); 
+
+        const toLocalISO = (d) => {
+            const offset = d.getTimezoneOffset() * 60000;
+            return (new Date(d - offset)).toISOString().slice(0, 10);
+        };
+
+        const [historyRes, heatmapRes] = await Promise.all([
+            habitApi.getHistory({
+                from_date: toLocalISO(startDate),
+                to_date: toLocalISO(endDate),
+                limit: 1000 
+            }),
+            habitApi.getHeatmap(year, month)
+        ]);
         
-        setLogs(res);
-        processChartData(res, startDate, range);
+        setLogs(historyRes);
+        setHeatmapData(heatmapRes);
+        processChartData(historyRes, startDate, endDate.getDate());
 
       } catch (error) {
         console.error("Lỗi load stats:", error);
@@ -40,107 +53,132 @@ const StatsPage = () => {
       }
     };
 
-    fetchData();
-  }, [range]);
+    fetchAllStats();
+  }, [selectedDate]);
 
-  const processChartData = (data, startDate, days) => {
-    // A. Xử lý BarChart
+  const processChartData = (data, startDate, daysInMonth) => {
     const statsMap = {};
-    
-    for (let i = 0; i < days; i++) {
+    for (let i = 0; i < daysInMonth; i++) {
       const d = new Date(startDate);
       d.setDate(d.getDate() + i);
-      const dateStr = d.toISOString().split('T')[0];
+      const offset = d.getTimezoneOffset() * 60000;
+      const dateStr = (new Date(d - offset)).toISOString().slice(0, 10);
       const displayDate = `${d.getDate()}/${d.getMonth() + 1}`;
-      // 👇 Thêm trường partial vào statsMap
       statsMap[dateStr] = { date: displayDate, completed: 0, partial: 0 };
     }
 
-    // Biến đếm cho PieChart
-    let countCompleted = 0;
-    let countPartial = 0; // 👇 Thêm biến đếm Partial
-    let countSkipped = 0;
-    let countFailed = 0;
+    let countCompleted = 0, countPartial = 0, countSkipped = 0, countFailed = 0;
 
     data.forEach(log => {
       const dateKey = log.record_date;
-      
-      // 1. Đếm tổng cho PieChart
       if (log.status === 'COMPLETED') countCompleted++;
-      else if (log.status === 'PARTIAL') countPartial++; // 👇 Logic mới
+      else if (log.status === 'PARTIAL') countPartial++;
       else if (log.status === 'SKIPPED') countSkipped++;
       else countFailed++;
 
-      // 2. Đếm theo ngày cho BarChart
       if (statsMap[dateKey]) {
         if (log.status === 'COMPLETED') statsMap[dateKey].completed += 1;
-        if (log.status === 'PARTIAL') statsMap[dateKey].partial += 1; // 👇 Logic mới
+        if (log.status === 'PARTIAL') statsMap[dateKey].partial += 1;
       }
     });
 
     setChartData(Object.values(statsMap));
 
-    // B. Xử lý PieChart (Thêm 'Một phần' vào data)
     const pieSource = [
       { name: 'Hoàn thành', value: countCompleted },
-      { name: 'Một phần', value: countPartial }, // 👇
+      { name: 'Một phần', value: countPartial },
       { name: 'Bỏ qua', value: countSkipped },
       { name: 'Thất bại', value: countFailed }
     ];
-    
-    // Lọc bỏ những cái value = 0 để biểu đồ đỡ rối
     setPieData(pieSource.filter(item => item.value > 0));
   };
 
-  if (loading) return <div className="p-10 text-center">Đang tính toán số liệu... 📊</div>;
+  const handleMonthChange = (e) => {
+    if (e.target.value) {
+        const [y, m] = e.target.value.split('-');
+        setSelectedDate(new Date(parseInt(y), parseInt(m) - 1, 1));
+    }
+  };
+
+  const heatmapStart = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1);
+  const heatmapEnd = new Date(selectedDate.getFullYear(), selectedDate.getMonth() + 1, 0);
+  const currentMonthStr = `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, '0')}`;
+
+  if (loading && logs.length === 0 && heatmapData.length === 0) return <div className="p-10 text-center">Đang tải dữ liệu... ⏳</div>;
 
   return (
-    <div className="space-y-6">
-      {/* Header & Filter */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+    <div className="space-y-6 pb-20">
+      {/* HEADER & FILTER */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Thống kê hoạt động</h1>
-          <p className="text-gray-500">Xem lại hiệu suất của bạn trong thời gian qua</p>
+          <h1 className="text-xl md:text-2xl font-bold text-gray-900">Thống kê hoạt động</h1>
+          <p className="text-sm text-gray-500">Tháng {selectedDate.getMonth() + 1}/{selectedDate.getFullYear()}</p>
         </div>
         
-        <div className="flex bg-white rounded-lg p-1 shadow-sm border">
-          <button onClick={() => setRange(7)} className={`px-4 py-2 text-sm font-medium rounded-md transition ${range === 7 ? 'bg-indigo-100 text-indigo-700' : 'text-gray-600 hover:bg-gray-50'}`}>7 ngày qua</button>
-          <button onClick={() => setRange(30)} className={`px-4 py-2 text-sm font-medium rounded-md transition ${range === 30 ? 'bg-indigo-100 text-indigo-700' : 'text-gray-600 hover:bg-gray-50'}`}>30 ngày qua</button>
+        <div className="flex items-center gap-2 bg-white px-3 py-2 rounded-lg shadow-sm border border-gray-200 w-fit">
+            <Calendar size={18} className="text-gray-500"/>
+            <input 
+                type="month" 
+                className="text-sm font-bold text-gray-700 outline-none bg-transparent cursor-pointer"
+                value={currentMonthStr}
+                onChange={handleMonthChange}
+            />
         </div>
       </div>
 
-      {/* Charts Grid */}
+      {/* HEATMAP - Fix width: max-w-2xl và mx-auto */}
+      <div className="bg-white p-4 md:p-6 rounded-xl shadow-sm border border-gray-100">
+        <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
+            <Activity size={20} className="text-green-600"/> Bản đồ năng suất
+        </h3>
+
+        <div className="w-full max-w-xs mx-auto"> 
+            <CalendarHeatmap
+                startDate={heatmapStart}
+                endDate={heatmapEnd}
+                values={heatmapData}
+                classForValue={(value) => {
+                    if (!value) return 'color-scale-0'; 
+                    return `color-scale-${value.level}`; 
+                }}
+                tooltipDataAttrs={value => {
+                    if (!value || !value.date) return null;
+                    return {
+                        'data-tooltip-id': 'heatmap-tooltip',
+                        'data-tooltip-content': `${new Date(value.date).toLocaleDateString('vi-VN')}: ${value.rate}%`,
+                    };
+                }}
+                showWeekdayLabels={true}
+                gutterSize={3} 
+            />
+            <Tooltip id="heatmap-tooltip" style={{ backgroundColor: "#1F2937", borderRadius: "8px", fontSize: "12px", zIndex: 50 }} />
+        </div>
+      </div>
+
+      {/* CHARTS GRID */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        
-        {/* Chart 1: Tần suất (Cột Chồng) */}
-        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+        <div className="bg-white p-4 md:p-6 rounded-xl shadow-sm border border-gray-100">
           <h3 className="text-lg font-bold text-gray-800 mb-6 flex items-center gap-2">
-            <Calendar size={20} className="text-indigo-500"/> Số thói quen thực hiện
+            <Calendar size={20} className="text-indigo-500"/> Tần suất theo ngày
           </h3>
           <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={chartData}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                <XAxis dataKey="date" tick={{fontSize: 12}} />
-                <YAxis allowDecimals={false} />
-                <Tooltip 
-                  contentStyle={{borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'}}
-                  cursor={{fill: '#F3F4F6'}}
-                />
+                <XAxis dataKey="date" tick={{fontSize: 10}} interval={2} /> 
+                <YAxis allowDecimals={false} width={30} tick={{fontSize: 10}}/>
+                <RechartsTooltip contentStyle={{borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'}} />
                 <Legend iconType="circle"/>
-                {/* 👇 Cột Hoàn thành (Xanh lá) */}
-                <Bar name="Hoàn thành" dataKey="completed" stackId="a" fill="#10B981" radius={[0, 0, 4, 4]} barSize={range === 7 ? 40 : 10} />
-                {/* 👇 Cột Một phần (Xanh dương) - Stack lên trên */}
-                <Bar name="Một phần" dataKey="partial" stackId="a" fill="#3B82F6" radius={[4, 4, 0, 0]} barSize={range === 7 ? 40 : 10} />
+                <Bar name="Hoàn thành" dataKey="completed" stackId="a" fill="#10B981" radius={[0, 0, 4, 4]} barSize={20} />
+                <Bar name="Một phần" dataKey="partial" stackId="a" fill="#3B82F6" radius={[4, 4, 0, 0]} barSize={20} />
               </BarChart>
             </ResponsiveContainer>
           </div>
         </div>
 
-        {/* Chart 2: Tỉ lệ trạng thái (Tròn) */}
-        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+        <div className="bg-white p-4 md:p-6 rounded-xl shadow-sm border border-gray-100">
           <h3 className="text-lg font-bold text-gray-800 mb-6 flex items-center gap-2">
-            <Filter size={20} className="text-orange-500"/> Tỉ lệ thực hiện
+            <Filter size={20} className="text-orange-500"/> Tỉ lệ trong tháng
           </h3>
           <div className="h-64 relative">
             {pieData.length === 0 ? (
@@ -149,23 +187,20 @@ const StatsPage = () => {
                 <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                     <Pie
-                      data={pieData}
-                      cx="50%" cy="50%"
+                      data={pieData} cx="50%" cy="50%"
                       innerRadius={60} outerRadius={80}
-                      paddingAngle={5}
-                      dataKey="value"
+                      paddingAngle={5} dataKey="value"
                     >
                     {pieData.map((entry, index) => {
-                       // Logic chọn màu dựa trên tên
-                       let color = '#9CA3AF'; // Default gray
-                       if (entry.name === 'Hoàn thành') color = '#10B981';
-                       else if (entry.name === 'Một phần') color = '#3B82F6'; // Blue
-                       else if (entry.name === 'Bỏ qua') color = '#F59E0B';
-                       else if (entry.name === 'Thất bại') color = '#EF4444';
-                       return <Cell key={`cell-${index}`} fill={color} />;
+                        let color = '#9CA3AF'; 
+                        if (entry.name === 'Hoàn thành') color = '#10B981';
+                        else if (entry.name === 'Một phần') color = '#3B82F6';
+                        else if (entry.name === 'Bỏ qua') color = '#F59E0B';
+                        else if (entry.name === 'Thất bại') color = '#EF4444';
+                        return <Cell key={`cell-${index}`} fill={color} />;
                     })}
                     </Pie>
-                    <Tooltip />
+                    <RechartsTooltip />
                     <Legend verticalAlign="bottom" height={36}/>
                 </PieChart>
                 </ResponsiveContainer>
@@ -174,45 +209,46 @@ const StatsPage = () => {
         </div>
       </div>
 
-      {/* Lịch sử chi tiết */}
+      {/* HISTORY TABLE - Scrollable on mobile */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-        <div className="p-6 border-b border-gray-100">
-          <h3 className="text-lg font-bold text-gray-800">Lịch sử chi tiết</h3>
+        <div className="p-4 md:p-6 border-b border-gray-100">
+          <h3 className="text-lg font-bold text-gray-800">Nhật ký chi tiết</h3>
         </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
+        <div className="overflow-x-auto overflow-y-scroll max-h-96">
+          <table className="w-full text-left text-sm whitespace-nowrap">
             <thead className="bg-gray-50 text-gray-500">
               <tr>
-                <th className="px-6 py-3 font-medium">Ngày</th>
-                <th className="px-6 py-3 font-medium">Thói quen</th>
-                <th className="px-6 py-3 font-medium">Kết quả</th>
-                <th className="px-6 py-3 font-medium">Trạng thái</th>
+                <th className="px-4 py-3 md:px-6 font-medium">Ngày</th>
+                <th className="px-4 py-3 md:px-6 font-medium">Thói quen</th>
+                <th className="px-4 py-3 md:px-6 font-medium">Kết quả</th>
+                <th className="px-4 py-3 md:px-6 font-medium">Trạng thái</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
               {logs.length === 0 ? (
-                <tr><td colSpan="4" className="px-6 py-8 text-center text-gray-400">Chưa có dữ liệu.</td></tr>
+                <tr><td colSpan="4" className="px-6 py-8 text-center text-gray-400">Không có hoạt động nào.</td></tr>
               ) : (
-                  logs.slice(0, 10).map((log) => (
+                  logs.map((log) => (
                     <tr key={log.id} className="hover:bg-gray-50 transition">
-                    <td className="px-6 py-3 text-gray-600">
-                        {new Date(log.record_date).toLocaleDateString('vi-VN')}
+                    <td className="px-4 py-3 md:px-6 text-gray-600">{new Date(log.record_date).toLocaleDateString('vi-VN')}</td>
+                    <td className="px-4 py-3 md:px-6 font-medium text-gray-800">{log.habit_name || "Thói quen cũ"}</td>
+                    <td className="px-4 py-3 md:px-6 text-gray-600">
+                      {
+                        log.unit !== null
+                          ? `${log.value} ${log.unit}`
+                          : {
+                              COMPLETED: 'Hoàn thành',
+                              SKIPPED: 'Bỏ qua',
+                              FAILED: 'Thất bại'
+                            }[log.status] || 'Không xác định'
+                      }
                     </td>
-                    <td className="px-6 py-3 font-medium text-gray-800">
-                        {log.habit_name || "Thói quen cũ"}
-                    </td>
-                    <td className="px-6 py-3 text-gray-600">
-                        {log.value > 0 ? log.value : '-'}
-                        {" " + log.unit}
-                    </td>
-                    <td className="px-6 py-3">
-                        {/* 👇 BADGE HIỂN THỊ TRẠNG THÁI */}
+                    <td className="px-4 py-3 md:px-6">
                         <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium border
                         ${log.status === 'COMPLETED' ? 'bg-green-50 text-green-700 border-green-200' : 
                           log.status === 'PARTIAL' ? 'bg-blue-50 text-blue-700 border-blue-200' :
                           log.status === 'SKIPPED' ? 'bg-yellow-50 text-yellow-700 border-yellow-200' : 
                           'bg-red-50 text-red-700 border-red-200'}`}>
-                          
                           {log.status === 'PARTIAL' && <PieChartIcon size={12}/>}
                           {log.status}
                         </span>
@@ -224,6 +260,16 @@ const StatsPage = () => {
           </table>
         </div>
       </div>
+
+      <style>{`
+        .react-calendar-heatmap text { font-size: 10px; fill: #9CA3AF; }
+        .react-calendar-heatmap .color-scale-0 { fill: #E5E7EB; rx: 3px; } 
+        .react-calendar-heatmap .color-scale-1 { fill: #bbf7d0; rx: 3px; }
+        .react-calendar-heatmap .color-scale-2 { fill: #4ade80; rx: 3px; }
+        .react-calendar-heatmap .color-scale-3 { fill: #16a34a; rx: 3px; }
+        .react-calendar-heatmap .color-scale-4 { fill: #14532d; rx: 3px; }
+        .react-calendar-heatmap { width: 100%; height: auto; }
+      `}</style>
     </div>
   );
 };

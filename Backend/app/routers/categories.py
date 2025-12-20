@@ -63,15 +63,19 @@ def delete_category(
     db: Session = Depends(db_connection.get_db),
     current_user: models.User = Depends(get_admin_user)
     ):
-    deleted_category = crud_category.delete_category(db = db, category_id = category_id)
-    list_habits = crud_category.get_habits_by_category(db = db, category_id = category_id)
+    delete_category = crud_category.get_category(db = db, category_id = category_id)
+    if delete_category is None:
+        raise HTTPException(status_code = 404, detail = "Không tìm thấy danh mục thói quen để xóa")
+    list_habits = db.query(models.Habit).filter(models.Habit.category_id == category_id).all()
+    
     if len(list_habits) > 0:
         raise HTTPException(
             status_code = 400, 
             detail = "Không thể xóa danh mục thói quen này vì vẫn còn thói quen thuộc danh mục!"
         )
-    if deleted_category is None:
-        raise HTTPException(status_code = 404, detail = "Không tìm thấy danh mục thói quen để xóa")
+    # Thực hiện xóa
+    deleted_category = crud_category.delete_category(db = db, category_id = category_id)
+
     return {
         "message": f"Xóa danh mục thói quen có id {category_id} thành công!",
         "category": jsonable_encoder(deleted_category)

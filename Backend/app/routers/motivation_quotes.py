@@ -34,7 +34,7 @@ def read_all_motivation_quotes(
     skip: int = 0, 
     limit: int = 100,
     db: Session = Depends(db_connection.get_db),
-    current_user: models.User = Depends(get_admin_user),
+    current_user: models.User = Depends(get_current_user),
     search: Optional[str] = None
     ):
     

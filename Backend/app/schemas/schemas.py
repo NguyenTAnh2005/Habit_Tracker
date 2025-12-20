@@ -63,6 +63,11 @@ class UserUpdate(BaseModel):
     email: Optional[str] = None
     password: Optional[str] = None
     username: Optional[str] = None
+    
+# schema cho admin cập nhật user bởi Admin (có thể thay đổi role)
+class UserUpdateByAdmin(UserUpdate):
+    role_id: Optional[int] = None
+
 
 #===============SCHEMA CHO BẢNG HABIT CATEGORY
 class HabitCategoryBase(BaseModel):
