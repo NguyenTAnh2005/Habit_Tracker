@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
-// 👇 1. Thêm Eye và EyeOff vào import
-import { Search, Trash2, Pencil, Plus, Shield, X, Eye, EyeOff } from 'lucide-react';
+import { Search, Trash2, Pencil, Plus, Shield, X } from 'lucide-react';
 import userApi from '../../api/userAPI'; 
 
 const UsersManager = () => {
@@ -13,9 +12,6 @@ const UsersManager = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
   
-  // 👇 2. Thêm state quản lý hiển thị mật khẩu
-  const [showPassword, setShowPassword] = useState(false);
-
   const [formData, setFormData] = useState({
     username: '', email: '', full_name: '', password: '', role_id: 2
   });
@@ -44,7 +40,6 @@ const UsersManager = () => {
   const openCreate = () => {
     setEditingUser(null);
     setFormData({ username: '', email: '', full_name: '', password: '', role_id: 2 });
-    setShowPassword(false); // Reset về ẩn mỗi khi mở form tạo mới
     setIsModalOpen(true);
   };
 
@@ -98,7 +93,7 @@ const UsersManager = () => {
 
   return (
     <div>
-      {/* Search Bar Responsive */}
+      {/* Search Bar Responsive: flex-col trên mobile, flex-row trên PC */}
       <div className="flex flex-col md:flex-row gap-4 mb-6 justify-between">
         <div className="flex flex-col md:flex-row gap-4 flex-1">
             <div className="relative flex-1">
@@ -117,7 +112,7 @@ const UsersManager = () => {
         </button>
       </div>
 
-      {/* Table Responsive */}
+      {/* Table Responsive: overflow-x-auto để vuốt ngang */}
       <div className="overflow-x-auto rounded-lg border border-gray-200">
         <table className="w-full text-left text-sm whitespace-nowrap">
             <thead className="bg-gray-50 text-gray-700 font-semibold uppercase tracking-wider">
@@ -159,7 +154,7 @@ const UsersManager = () => {
             </tbody>
         </table>
         {users.length === 0 && !loading && <div className="text-center py-8 text-gray-400">Không tìm thấy user nào.</div>}
-      </div>
+    </div>
 
       {isModalOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-[60] backdrop-blur-sm">
@@ -202,27 +197,12 @@ const UsersManager = () => {
                             value={formData.full_name} onChange={e => setFormData({...formData, full_name: e.target.value})} />
                     </div>
 
-                    {/* 👇 3. UI phần Mật khẩu có nút Toggle */}
                     {!editingUser && (
                         <div>
                             <label className="block text-sm font-medium mb-1">Mật khẩu</label>
-                            <div className="relative">
-                                <input 
-                                    type={showPassword ? "text" : "password"} 
-                                    required 
-                                    className="w-full border rounded-lg p-2.5 pr-10 outline-none focus:ring-2 focus:ring-indigo-500"
-                                    placeholder="Nhập mật khẩu..."
-                                    value={formData.password} 
-                                    onChange={e => setFormData({...formData, password: e.target.value})} 
-                                />
-                                <button 
-                                    type="button" // Quan trọng: type="button" để tránh submit form
-                                    onClick={() => setShowPassword(!showPassword)}
-                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition"
-                                >
-                                    {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-                                </button>
-                            </div>
+                            <input type="password" required className="w-full border rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-indigo-500"
+                                placeholder="Nhập mật khẩu..."
+                                value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} />
                         </div>
                     )}
 
