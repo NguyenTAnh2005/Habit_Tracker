@@ -3,7 +3,7 @@ import {
   Home, List, BarChart2, User, LogOut, UserRoundCog, ShieldCheck, X 
 } from 'lucide-react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import authApi from '../api/authApi';
+import authApi from '../api/authAPI';
 
 // 👇 Nhận props từ MainLayout
 const Sidebar = ({ isOpen, toggleSidebar }) => {
