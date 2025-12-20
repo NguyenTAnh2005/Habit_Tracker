@@ -220,8 +220,13 @@ def update_user_by_admin(
                 detail="Bạn không thể tự hạ quyền Admin của chính mình. Hãy nhờ Admin khác làm điều này!"
             )
     # Update thủ công các trường Admin gửi lên
-    # Lưu ý: Cần cẩn thận logic nếu update password ở đây (cần hash lại)
-    # Ở đây mình ví dụ update thông tin cơ bản
+    if user_update.username:
+        # Nếu đổi username, cần check xem username mới có trùng ai ko
+        existing_user = crud_user.get_user_by_username(db, username=user_update.username)
+        if existing_user and existing_user.id != db_user.id:
+            raise HTTPException(status_code=400, detail="Username này đã tồn tại!")
+        db_user.username = user_update.username
+            
     if user_update.full_name:
         db_user.full_name = user_update.full_name
     if user_update.email:
