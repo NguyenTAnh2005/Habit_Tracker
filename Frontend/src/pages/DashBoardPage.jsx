@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Activity, CheckCircle, Calendar, Search, PieChart, FastForward, AlertCircle, ChevronLeft, ChevronRight, RotateCcw } from 'lucide-react';
 import habitApi from '../api/habitAPI';
-import authApi from '../api/authApi';
+import authApi from '../api/authAPI';
 import CheckInModal from '../components/CheckInModal';
 import QuoteCarousel from '../components/QuoteCarousel';
 

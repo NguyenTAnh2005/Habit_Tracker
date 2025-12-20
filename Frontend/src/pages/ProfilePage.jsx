@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { User, Mail, Lock, Shield, Save, LogOut, Camera, Eye, EyeOff, X, Edit3, AtSign } from 'lucide-react';
-import authApi from '../api/authApi';
+import authApi from '../api/authAPI';
 import userApi from '../api/userAPI';
 import { useNavigate } from 'react-router-dom';
 

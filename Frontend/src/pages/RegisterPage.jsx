@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { User, Mail, Lock, UserPlus, AlertCircle, CheckCircle } from 'lucide-react';
-import authApi from '../api/authApi';
+import authApi from '../api/authAPI';
 
 const RegisterPage = () => {
   const navigate = useNavigate();
