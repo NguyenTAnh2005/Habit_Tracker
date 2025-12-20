@@ -1,0 +1,167 @@
+Folder PATH listing for volume Data
+Volume serial number is 4189-83E0
+F:.
+¦   .gitignore
+¦   12_12_nhan_ban_cac_API_crud.txt
+¦   13_12.txt
+¦   CuoiKy_OS.docx
+¦   README.md
+¦   structure.txt
+¦   Thiet_ke_DB.xlsx
+¦   
++---Backend
+¦   ¦   alembic.ini
+¦   ¦   main.py
+¦   ¦   requirements.txt
+¦   ¦   
+¦   +---alembic
+¦   ¦   ¦   env.py
+¦   ¦   ¦   README
+¦   ¦   ¦   script.py.mako
+¦   ¦   ¦   
+¦   ¦   +---versions
+¦   ¦   ¦   ¦   12e99d621eca_first_create_table.py
+¦   ¦   ¦   ¦   
+¦   ¦   ¦   +---__pycache__
+¦   ¦   ¦           12e99d621eca_first_create_table.cpython-312.pyc
+¦   ¦   ¦           
+¦   ¦   +---__pycache__
+¦   ¦           env.cpython-312.pyc
+¦   ¦           
+¦   +---app
+¦       +---core
+¦       ¦   ¦   config.py
+¦       ¦   ¦   dependencies.py
+¦       ¦   ¦   logic.py
+¦       ¦   ¦   utils.py
+¦       ¦   ¦   __init__.py
+¦       ¦   ¦   
+¦       ¦   +---__pycache__
+¦       ¦           config.cpython-312.pyc
+¦       ¦           dependencies.cpython-312.pyc
+¦       ¦           logic.cpython-312.pyc
+¦       ¦           utils.cpython-312.pyc
+¦       ¦           __init__.cpython-312.pyc
+¦       ¦           
+¦       +---database
+¦       ¦   ¦   db_connection.py
+¦       ¦   ¦   init_db.py
+¦       ¦   ¦   models.py
+¦       ¦   ¦   __init__.py
+¦       ¦   ¦   
+¦       ¦   +---crud
+¦       ¦   ¦   ¦   crud_category.py
+¦       ¦   ¦   ¦   crud_habit.py
+¦       ¦   ¦   ¦   crud_habit_log.py
+¦       ¦   ¦   ¦   crud_motivation_quote.py
+¦       ¦   ¦   ¦   crud_role.py
+¦       ¦   ¦   ¦   crud_user.py
+¦       ¦   ¦   ¦   
+¦       ¦   ¦   +---__pycache__
+¦       ¦   ¦           crud_category.cpython-312.pyc
+¦       ¦   ¦           crud_habit.cpython-312.pyc
+¦       ¦   ¦           crud_habit_log.cpython-312.pyc
+¦       ¦   ¦           crud_motivation_quote.cpython-312.pyc
+¦       ¦   ¦           crud_role.cpython-312.pyc
+¦       ¦   ¦           crud_user.cpython-312.pyc
+¦       ¦   ¦           
+¦       ¦   +---__pycache__
+¦       ¦           crud_habit.cpython-312.pyc
+¦       ¦           crud_user.cpython-312.pyc
+¦       ¦           db_connection.cpython-312.pyc
+¦       ¦           init_db.cpython-312.pyc
+¦       ¦           models.cpython-312.pyc
+¦       ¦           __init__.cpython-312.pyc
+¦       ¦           
+¦       +---routers
+¦       ¦   ¦   auth.py
+¦       ¦   ¦   categories.py
+¦       ¦   ¦   habits.py
+¦       ¦   ¦   habit_logs.py
+¦       ¦   ¦   motivation_quotes.py
+¦       ¦   ¦   roles.py
+¦       ¦   ¦   users.py
+¦       ¦   ¦   __init__.py
+¦       ¦   ¦   
+¦       ¦   +---__pycache__
+¦       ¦           auth.cpython-312.pyc
+¦       ¦           categories.cpython-312.pyc
+¦       ¦           habits.cpython-312.pyc
+¦       ¦           habit_logs.cpython-312.pyc
+¦       ¦           motivation_quotes.cpython-312.pyc
+¦       ¦           roles.cpython-312.pyc
+¦       ¦           users.cpython-312.pyc
+¦       ¦           __init__.cpython-312.pyc
+¦       ¦           
+¦       +---schemas
+¦           ¦   schemas.py
+¦           ¦   __init__.py
+¦           ¦   
+¦           +---__pycache__
+¦                   schemas.cpython-312.pyc
+¦                   __init__.cpython-312.pyc
+¦                   
++---Frontend
+¦   ¦   .gitignore
+¦   ¦   eslint.config.js
+¦   ¦   index.html
+¦   ¦   package-lock.json
+¦   ¦   package.json
+¦   ¦   postcss.config.js
+¦   ¦   README.md
+¦   ¦   router.jsx
+¦   ¦   tailwind.config.js
+¦   ¦   vercel.json
+¦   ¦   vite.config.js
+¦   ¦   
+¦   +---public
+¦   ¦       vite.png
+¦   ¦       vite.svg
+¦   ¦       
+¦   +---src
+¦       ¦   App.css
+¦       ¦   App.jsx
+¦       ¦   index.css
+¦       ¦   main.jsx
+¦       ¦   
+¦       +---api
+¦       ¦       authAPI.js
+¦       ¦       axiosClient.js
+¦       ¦       habitAPI.js
+¦       ¦       userAPI.js
+¦       ¦       
+¦       +---assets
+¦       ¦       react.svg
+¦       ¦       
+¦       +---components
+¦       ¦   ¦   AdminRoute.jsx
+¦       ¦   ¦   CheckInModal.jsx
+¦       ¦   ¦   CreateHabitModal.jsx
+¦       ¦   ¦   HabitHistoryModal.jsx
+¦       ¦   ¦   QuoteCarousel.jsx
+¦       ¦   ¦   Sidebar.jsx
+¦       ¦   ¦   
+¦       ¦   +---admin
+¦       ¦           CategoriesManager.jsx
+¦       ¦           HabitManger.jsx
+¦       ¦           QuotesManager.jsx
+¦       ¦           RolesManager.jsx
+¦       ¦           UsersManager.jsx
+¦       ¦           
+¦       +---layout
+¦       ¦       MainLayout.jsx
+¦       ¦       
+¦       +---pages
+¦               AdminPage.jsx
+¦               DashBoardPage.jsx
+¦               ForgotPassWordPage.jsx
+¦               HabitPage.jsx
+¦               LoginPage.jsx
+¦               ProfilePage.jsx
+¦               RegisterPage.jsx
+¦               StatsPage.jsx
+¦               
++---PostgreSQL_Test
+        seed_data_test.sql
+        Test_Data_from_GeminiPro.sql
+        
