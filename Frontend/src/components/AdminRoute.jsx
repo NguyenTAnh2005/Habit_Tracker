@@ -1,6 +1,6 @@
 import { Navigate, Outlet } from 'react-router-dom';
 import { useEffect, useState } from 'react';
-import authApi from '../api/authApi';
+import authApi from '../api/authAPI';
 
 const AdminRoute = () => {
   const [isAdmin, setIsAdmin] = useState(null); // null = chưa check, true = admin, false = user
