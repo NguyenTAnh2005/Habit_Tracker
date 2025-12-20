@@ -1,119 +1,96 @@
-📌 Habit Tracker – Ứng dụng theo dõi thói quen
-📖 Giới thiệu
+# 📌 Habit Tracker – Ứng dụng theo dõi thói quen
 
-Habit Tracker là một ứng dụng giúp người dùng theo dõi các thói quen sinh hoạt hằng ngày, biết được hôm nay cần làm gì, từ đó kiểm soát và cải thiện thói quen trong cuộc sống hằng ngày một cách hiệu quả.
+## 📖 Giới thiệu
+**Habit Tracker** là một ứng dụng giúp người dùng theo dõi các thói quen sinh hoạt hằng ngày, biết được hôm nay cần làm gì, từ đó kiểm soát và cải thiện thói quen trong cuộc sống hằng ngày một cách hiệu quả.
 
-🎓 Mục đích học thuật
+---
 
-Đồ án cuối kỳ môn Phát triển ứng dụng mã nguồn mở
+## 🎓 Mục đích học thuật
+- Đồ án cuối kỳ môn **Phát triển ứng dụng mã nguồn mở**
 
-👥 Đối tượng sử dụng
+---
 
-Tất cả mọi người có nhu cầu quản lý và theo dõi thói quen cá nhân
+## 👥 Đối tượng sử dụng
+- Tất cả mọi người có nhu cầu quản lý và theo dõi thói quen cá nhân
 
-🎯 Mục tiêu dự án
+---
 
-Hỗ trợ người dùng theo dõi và quản lý thói quen hằng ngày
+## 🎯 Mục tiêu dự án
+- Theo dõi và quản lý thói quen hằng ngày  
+- Ghi nhận lịch sử thực hiện thói quen (check-in)  
+- Cung cấp thống kê trực quan giúp đánh giá mức độ duy trì thói quen  
+- Xây dựng lối sống khoa học và kỷ luật hơn  
 
-Ghi nhận lịch sử thực hiện thói quen (check-in)
+---
 
-Cung cấp thống kê trực quan giúp đánh giá mức độ duy trì thói quen
+## 🛠️ Công nghệ sử dụng
 
-Giúp người dùng xây dựng lối sống khoa học và kỷ luật hơn
+### 🔹 Frontend
+- ReactJS  
+- Vite  
+- Tailwind CSS  
+- Axios  
+- React Router DOM  
+- Lucide React  
+- Recharts  
+- React Calendar Heatmap  
+- React Toastify  
+- React Tooltip  
 
-🛠️ Công nghệ sử dụng
-🔹 Frontend
+### 🔹 Backend
+- FastAPI  
+- JWT Authentication  
+- SQLAlchemy  
+- Alembic (Database Migration)
 
-ReactJS
+### 🔹 Database
+- PostgreSQL  
 
-Vite
+### 🔹 Deploy
+- Backend & Database: Render  
+- Frontend: Vercel  
 
-Tailwind CSS
+> ⚠️ Hiện tại dự án **chưa deploy chính thức**, chưa có link demo.
 
-Axios – Giao tiếp với Backend
+---
 
-React Router DOM – Điều hướng
+## ✨ Chức năng chính
 
-Lucide React – Icon
+### 👤 Người dùng vãng lai
+- Đăng ký tài khoản  
 
-Recharts – Biểu đồ thống kê
+### 👤 Người dùng (User)
+- Đăng nhập  
+- Quên mật khẩu  
+- CRUD thói quen (Habit)  
+- Check-in thói quen hằng ngày  
+- Chỉnh sửa log cũ  
+- Xem thống kê hoàn thành  
+- Xem biểu đồ heatmap  
+- Xem & cập nhật thông tin cá nhân  
 
-React Calendar Heatmap – Biểu đồ heatmap theo ngày
+### 👑 Quản trị viên (Admin)
+- CRUD người dùng (không truy cập mật khẩu)  
+- CRUD danh mục thói quen  
+- CRUD câu nói tạo động lực  
+- CRUD quyền (Role)  
+- Xem danh sách thói quen của người dùng  
 
-React Toastify – Thông báo
+✅ **Trạng thái:** Hoàn thành toàn bộ chức năng cốt lõi
 
-React Tooltip
+---
 
-🔹 Backend
+## 🏗️ Kiến trúc hệ thống
+- Mô hình **Client – Server**  
+- Frontend & Backend giao tiếp qua **REST API**  
+- Frontend sử dụng **Axios**  
+- Backend xử lý nghiệp vụ & xác thực bằng **JWT**
 
-FastAPI
+---
 
-JWT Authentication
+## 📂 Cấu trúc thư mục
 
-SQLAlchemy
-
-Alembic – Migration Database
-
-🔹 Database
-
-PostgreSQL
-
-🔹 Deploy
-
-Backend & Database: Render
-
-Frontend: Vercel
-
-⚠️ Hiện tại dự án chưa deploy chính thức, chưa có link demo.
-
-✨ Chức năng chính
-👤 Người dùng vãng lai
-
-Đăng ký tài khoản
-
-👤 Người dùng (User)
-
-Đăng nhập
-
-Quên mật khẩu
-
-CRUD thói quen (Habit)
-
-Check-in thói quen hằng ngày
-
-Chỉnh sửa log cũ khi check-in sai hoặc chưa check-in
-
-Xem thống kê hoàn thành
-
-Xem biểu đồ heatmap
-
-Xem & cập nhật thông tin cá nhân
-
-👑 Quản trị viên (Admin)
-
-CRUD người dùng (không truy cập mật khẩu)
-
-CRUD danh mục thói quen
-
-CRUD câu nói tạo động lực (Motivation Quotes)
-
-CRUD quyền (Role)
-
-Xem danh sách thói quen của người dùng
-
-✅ Trạng thái: Đã hoàn thành toàn bộ chức năng cốt lõi
-
-🏗️ Kiến trúc hệ thống
-
-Mô hình Client – Server
-
-Frontend và Backend giao tiếp qua REST API
-
-Frontend sử dụng Axios để gọi API
-
-Backend xử lý nghiệp vụ và xác thực bằng JWT
-
-📂 Cấu trúc thư mục
+```txt
 Habit_Tracker/
 ├── Backend/
 │   ├── main.py                 # Entry point FastAPI
@@ -125,7 +102,7 @@ Habit_Tracker/
 │       ├── core/               # Cấu hình, logic chung, utils
 │       ├── database/           # Kết nối DB, models, CRUD
 │       │   └── crud/           # Các thao tác CRUD
-│       ├── routers/            # Các API endpoints
+│       ├── routers/            # API endpoints
 │       └── schemas/            # Pydantic schemas
 │
 ├── Frontend/
@@ -147,111 +124,100 @@ Habit_Tracker/
 ├── README.md
 └── Thiet_ke_DB.xlsx             # Thiết kế database
 
-⚙️ Hướng dẫn cài đặt & chạy dự án
-🔹 Backend
 
-Yêu cầu
+---
 
-Python 3.10+
+## ⚙️ Hướng dẫn cài đặt & chạy dự án
 
-PostgreSQL
+### 🔹 Backend
 
-Cài đặt thư viện
+#### Yêu cầu
+- Python **3.10+**
+- PostgreSQL
 
+#### Cài đặt
 pip install -r requirements.txt
 
-
-Cấu hình Database
-
-Tạo database PostgreSQL
-
-Cấu hình biến môi trường trong file .env
-
-Chạy server
-
+#### Chạy server
 uvicorn main:app --reload
 
-🔹 Frontend
+---
 
-Yêu cầu
+### 🔹 Frontend
 
-NodeJS v24.11.1
+#### Yêu cầu
+- NodeJS **v24.11.1**
 
-Cài đặt
-
+#### Cài đặt
 npm install
 
-
-Chạy dự án
-
+#### Chạy dự án
 npm run dev
 
-🔐 Biến môi trường
-Frontend
-VITE_API_URL=http://localhost:8000
+---
 
-Backend
+## 🔐 Biến môi trường
+
+### Backend (.env)
 DATABASE_URL=postgresql://...
 SECRET_KEY=your_secret_key
 
-MAIL_USERNAME=your_email
-MAIL_PASSWORD=your_app_password
-MAIL_FROM=your_email
-MAIL_PORT=587
-MAIL_SERVER=smtp.gmail.com
+MAIL_USERNAME=your_email  
+MAIL_PASSWORD=your_app_password  
+MAIL_FROM=your_email  
+MAIL_PORT=587  
+MAIL_SERVER=smtp.gmail.com  
 
+### Frontend (.env)
+VITE_API_URL=http://
 
-⚠️ Không commit thông tin nhạy cảm (email, mật khẩu) lên GitHub.
+⚠️ **Không commit thông tin nhạy cảm (email, mật khẩu) lên GitHub**
 
-🔌 API tiêu biểu
+---
 
-Lấy số lượng task cần làm trong ngày
-GET /habits/today
+## 🔌 API tiêu biểu
 
-Thống kê tỉ lệ hoàn thành trong ngày
-GET /logs/stats/today
+- GET `/habits/today` – Task cần làm hôm nay
+- GET `/logs/stats/today` – Thống kê hoàn thành
+- GET `/habits/{habit_id}/streaks` – Streak thói quen
+- POST `/login` – Đăng nhập
 
-Tính streak của thói quen
-GET /habits/{habit_id}/streaks
+---
 
-Đăng nhập
-POST /login
+## 🗄️ Database Design
 
-🗄️ Database Design
+Hệ thống gồm **7 bảng** (trong đó có **1 bảng dư**):
 
-Hệ thống gồm 7 bảng, trong đó có 1 bảng dư:
+- users
+- roles
+- habit_category
+- habits
+- habit_logs
+- motivation_quotes
+- user_token ❌ *(đã chuyển sang JWT)*
 
-users – Thông tin người dùng & admin
+---
 
-roles – Phân quyền
+## 🚧 Tình trạng & hướng phát triển
 
-habit_category – Danh mục thói quen
+### ✅ Hiện tại
+- Hoàn thành toàn bộ chức năng cơ bản
 
-habits – Quản lý thói quen
+### 🔜 Phát triển trong tương lai
+- Nhắc nhở thói quen
+- Chia sẻ thói quen
+- Thống kê nâng cao theo tuần / tháng
 
-habit_logs – Nhật ký check-in
+---
 
-motivation_quotes – Câu nói tạo động lực
+## 👨‍💻 Tác giả
 
-user_token – ❌ Bảng dư (đã chuyển sang JWT)
+- **Nguyễn Tuấn Anh**
+- **Lê Ngọc Sang**
 
-🚧 Tình trạng & hướng phát triển
+🎓 Sinh viên **Đại học Bình Dương**  
+📅 Khóa **2023 – 2027**
 
-✅ Hoàn thành chức năng cơ bản
+---
 
-🔜 Phát triển nâng cao:
-
-Gửi thông báo nhắc nhở
-
-Chia sẻ thói quen lên mạng xã hội
-
-Thống kê nâng cao theo tuần / tháng
-
-👨‍💻 Tác giả
-
-Nguyễn Tuấn Anh
-
-Lê Ngọc Sang
-
-🎓 Sinh viên Đại học Bình Dương
-📅 Khóa 2023 – 2027
+Được format style by CHAT GPT
