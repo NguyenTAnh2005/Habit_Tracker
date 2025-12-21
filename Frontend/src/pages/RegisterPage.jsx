@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { User, Mail, Lock, UserPlus, AlertCircle, CheckCircle } from 'lucide-react';
+// 👇 1. Thêm Eye và EyeOff vào import
+import { User, Mail, Lock, UserPlus, AlertCircle, CheckCircle, Eye, EyeOff } from 'lucide-react';
 import authApi from '../api/authAPI';
 
 const RegisterPage = () => {
@@ -14,6 +15,10 @@ const RegisterPage = () => {
     password: '',
     confirmPassword: ''
   });
+
+  // 👇 2. Thêm state để quản lý việc hiển thị cho 2 ô mật khẩu
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const [error, setError] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
@@ -45,8 +50,6 @@ const RegisterPage = () => {
     setLoading(true);
 
     try {
-      // 2. Gọi API đăng ký
-      // Backend cần: username, email, full_name, password, role_id (mặc định là 2-User nên ko cần gửi)
       const payload = {
         username: formData.username,
         email: formData.email,
@@ -58,14 +61,12 @@ const RegisterPage = () => {
       
       setSuccessMsg('Đăng ký thành công! Đang chuyển hướng đăng nhập...');
       
-      // 3. Đợi 1.5s rồi đá về trang Login để user đăng nhập
       setTimeout(() => {
         navigate('/login');
       }, 1500);
 
     } catch (err) {
       console.error("Register Error:", err);
-      // Lấy lỗi từ Backend trả về (VD: "Email đã tồn tại")
       const msg = err.response?.data?.detail || 'Đăng ký thất bại. Vui lòng thử lại.';
       setError(msg);
     } finally {
@@ -148,35 +149,45 @@ const RegisterPage = () => {
             </div>
           </div>
 
-          {/* Password */}
+          {/* 👇 3. Sửa ô Mật khẩu */}
           <div>
             <label className="mb-1 block text-sm font-medium text-gray-700">Mật khẩu</label>
             <div className="relative">
               <Lock className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
               <input
                 name="password"
-                type="password"
+                // Đổi type động
+                type={showPassword ? "text" : "password"}
                 placeholder="••••••"
                 required
                 minLength={6}
-                className="w-full rounded-lg border border-gray-300 pl-10 p-2.5 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                // Thêm pr-10 để chữ không đè lên icon mắt
+                className="w-full rounded-lg border border-gray-300 pl-10 pr-10 p-2.5 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
                 value={formData.password}
                 onChange={handleChange}
               />
+              <button 
+                type="button" 
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-2.5 text-gray-400 hover:text-gray-600 transition"
+              >
+                {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+              </button>
             </div>
           </div>
 
-          {/* Confirm Password */}
+          {/* 👇 4. Sửa ô Nhập lại mật khẩu */}
           <div>
             <label className="mb-1 block text-sm font-medium text-gray-700">Nhập lại mật khẩu</label>
             <div className="relative">
               <Lock className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
               <input
                 name="confirmPassword"
-                type="password"
+                // Đổi type động
+                type={showConfirmPassword ? "text" : "password"}
                 placeholder="••••••"
                 required
-                className={`w-full rounded-lg border pl-10 p-2.5 focus:outline-none focus:ring-1 ${
+                className={`w-full rounded-lg border pl-10 pr-10 p-2.5 focus:outline-none focus:ring-1 ${
                     formData.confirmPassword && formData.password !== formData.confirmPassword 
                     ? 'border-red-500 focus:border-red-500 focus:ring-red-500 bg-red-50' 
                     : 'border-gray-300 focus:border-indigo-500 focus:ring-indigo-500'
@@ -184,6 +195,13 @@ const RegisterPage = () => {
                 value={formData.confirmPassword}
                 onChange={handleChange}
               />
+              <button 
+                type="button" 
+                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                className="absolute right-3 top-2.5 text-gray-400 hover:text-gray-600 transition"
+              >
+                {showConfirmPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+              </button>
             </div>
           </div>
 
