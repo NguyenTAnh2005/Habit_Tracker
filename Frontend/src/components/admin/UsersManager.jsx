@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
-// 👇 1. Thêm Eye và EyeOff vào import
-import { Search, Trash2, Pencil, Plus, Shield, X, Eye, EyeOff } from 'lucide-react';
+import { 
+  Search, Trash2, Pencil, Plus, Shield, X, Eye, EyeOff, Lock 
+} from 'lucide-react';
 import userApi from '../../api/userAPI'; 
 
 const UsersManager = () => {
@@ -12,9 +13,14 @@ const UsersManager = () => {
   
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
-  
-  // 👇 2. Thêm state quản lý hiển thị mật khẩu
   const [showPassword, setShowPassword] = useState(false);
+
+  // --- STATE CHO LỚP BẢO MẬT XÓA USER ---
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [userToDelete, setUserToDelete] = useState(null);
+  const [adminPassword, setAdminPassword] = useState('');
+  const [verifying, setVerifying] = useState(false);
+  const [showAdminPass, setShowAdminPass] = useState(false);
 
   const [formData, setFormData] = useState({
     username: '', email: '', full_name: '', password: '', role_id: 2
@@ -44,7 +50,7 @@ const UsersManager = () => {
   const openCreate = () => {
     setEditingUser(null);
     setFormData({ username: '', email: '', full_name: '', password: '', role_id: 2 });
-    setShowPassword(false); // Reset về ẩn mỗi khi mở form tạo mới
+    setShowPassword(false);
     setIsModalOpen(true);
   };
 
@@ -85,14 +91,32 @@ const UsersManager = () => {
     }
   };
 
-  const handleDelete = async (id) => {
-    if(!window.confirm("CẢNH BÁO: Xóa user sẽ xóa TOÀN BỘ dữ liệu (Habit, Log) của họ. Tiếp tục?")) return;
+  // 1. Khi bấm nút Xóa -> Mở Modal xác nhận mật khẩu Admin
+  const handleDeleteClick = (user) => {
+    setUserToDelete(user);
+    setAdminPassword('');
+    setShowAdminPass(false);
+    setShowDeleteModal(true);
+  };
+
+  // 2. Xử lý xác nhận xóa sau khi Admin nhập Pass
+  const handleConfirmDelete = async (e) => {
+    e.preventDefault();
+    setVerifying(true);
     try {
-      await userApi.deleteUser(id);
-      alert("✅ Xóa thành công!");
+      // Xác thực mật khẩu của chính Admin đang đăng nhập
+      await userApi.verifyPassword(adminPassword);
+      
+      // Nếu đúng mật khẩu -> Thực hiện xóa user mục tiêu
+      await userApi.deleteUser(userToDelete.id);
+      
+      alert(`✅ Đã xóa thành công người dùng: ${userToDelete.username}`);
+      setShowDeleteModal(false);
       fetchData();
     } catch (error) {
-      alert("Lỗi: " + (error.response?.data?.detail || "Không thể xóa"));
+      alert("❌ Mật khẩu Admin không chính xác!");
+    } finally {
+      setVerifying(false);
     }
   };
 
@@ -151,30 +175,26 @@ const UsersManager = () => {
                         <td className="px-4 py-3 text-right">
                             <div className="flex justify-end gap-2">
                                 <button onClick={() => openEdit(u)} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded transition" title="Sửa"><Pencil size={16}/></button>
-                                <button onClick={() => handleDelete(u.id)} className="p-1.5 text-red-600 hover:bg-red-50 rounded transition" title="Xóa"><Trash2 size={16}/></button>
+                                {/* 👇 ĐỔI HÀM XỬ LÝ XÓA */}
+                                <button onClick={() => handleDeleteClick(u)} className="p-1.5 text-red-600 hover:bg-red-50 rounded transition" title="Xóa"><Trash2 size={16}/></button>
                             </div>
                         </td>
                     </tr>
                 ))}
             </tbody>
         </table>
-        {users.length === 0 && !loading && <div className="text-center py-8 text-gray-400">Không tìm thấy user nào.</div>}
       </div>
 
+      {/* MODAL THÊM/SỬA (Giữ nguyên) */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-[60] backdrop-blur-sm">
+         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-[60] backdrop-blur-sm">
             <div className="bg-white rounded-xl p-6 w-full max-w-md shadow-2xl animate-in zoom-in duration-200 overflow-y-auto max-h-[90vh]">
                 <div className="flex justify-between items-center mb-4">
                     <h3 className="text-lg font-bold">{editingUser ? 'Sửa thông tin User' : 'Tạo tài khoản mới'}</h3>
                     <button onClick={() => setIsModalOpen(false)}><X size={20} className="text-gray-400 hover:text-gray-600"/></button>
                 </div>
                 <form onSubmit={handleSubmit} className="space-y-4">
-                    {!editingUser && (
-                        <div className="p-3 bg-blue-50 text-blue-700 text-xs rounded-lg border border-blue-100 mb-2">
-                            Mật khẩu sẽ được mã hóa (Hash) tự động trước khi lưu vào Database.
-                        </div>
-                    )}
-                    
+                    {/* ... (Các trường input giữ nguyên) ... */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
                             <label className="block text-sm font-medium mb-1">Username</label>
@@ -189,20 +209,16 @@ const UsersManager = () => {
                             </select>
                         </div>
                     </div>
-
                     <div>
                         <label className="block text-sm font-medium mb-1">Email</label>
                         <input type="email" required className="w-full border rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-indigo-500"
                             value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} />
                     </div>
-
                     <div>
                         <label className="block text-sm font-medium mb-1">Tên hiển thị</label>
                         <input type="text" required className="w-full border rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-indigo-500"
                             value={formData.full_name} onChange={e => setFormData({...formData, full_name: e.target.value})} />
                     </div>
-
-                    {/* 👇 3. UI phần Mật khẩu có nút Toggle */}
                     {!editingUser && (
                         <div>
                             <label className="block text-sm font-medium mb-1">Mật khẩu</label>
@@ -216,16 +232,15 @@ const UsersManager = () => {
                                     onChange={e => setFormData({...formData, password: e.target.value})} 
                                 />
                                 <button 
-                                    type="button" // Quan trọng: type="button" để tránh submit form
+                                    type="button"
                                     onClick={() => setShowPassword(!showPassword)}
-                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition"
+                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
                                 >
                                     {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                                 </button>
                             </div>
                         </div>
                     )}
-
                     <div className="flex justify-end gap-3 mt-6 pt-4 border-t">
                         <button type="button" onClick={() => setIsModalOpen(false)} className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg">Hủy</button>
                         <button type="submit" className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 shadow">
@@ -234,6 +249,49 @@ const UsersManager = () => {
                     </div>
                 </form>
             </div>
+        </div>
+      )}
+
+      {/* 👇 MODAL XÁC MINH MẬT KHẨU ADMIN TRƯỚC KHI XÓA USER 👇 */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black bg-opacity-50 p-4 backdrop-blur-sm">
+          <div className="bg-white rounded-xl p-6 w-full max-w-sm shadow-2xl animate-in zoom-in duration-200">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-bold text-red-600 flex items-center gap-2">
+                <Lock size={20}/> Xác minh Admin
+              </h3>
+              <button onClick={() => setShowDeleteModal(false)}><X size={20} className="text-gray-400 hover:text-gray-600"/></button>
+            </div>
+            
+            <p className="text-sm text-gray-600 mb-4">
+                Bạn đang xóa người dùng <b>"{userToDelete?.username}"</b>. <br/>
+                Hành động này sẽ xóa <b>VĨNH VIỄN</b> mọi dữ liệu liên quan. Vui lòng nhập mật khẩu Admin để xác nhận.
+            </p>
+            
+            <form onSubmit={handleConfirmDelete}>
+              <div className="mb-4 relative">
+                  <input 
+                    type={showAdminPass ? "text" : "password"} 
+                    autoFocus required
+                    placeholder="Mật khẩu Admin..."
+                    className="w-full border border-gray-300 rounded-lg p-2.5 pr-10 focus:ring-2 focus:ring-red-500 outline-none"
+                    value={adminPassword}
+                    onChange={e => setAdminPassword(e.target.value)}
+                  />
+                  <button type="button" onClick={() => setShowAdminPass(!showAdminPass)} className="absolute right-3 top-3 text-gray-400">
+                    {showAdminPass ? <EyeOff size={18}/> : <Eye size={18}/>}
+                  </button>
+              </div>
+              <div className="flex gap-3">
+                <button type="button" onClick={() => setShowDeleteModal(false)} className="flex-1 bg-gray-100 text-gray-600 py-2.5 rounded-lg font-bold hover:bg-gray-200 transition">
+                    Hủy bỏ
+                </button>
+                <button type="submit" disabled={verifying} className="flex-1 bg-red-600 text-white py-2.5 rounded-lg font-bold hover:bg-red-700 transition flex justify-center items-center gap-2">
+                    {verifying ? "Đang xử lý..." : "Xác nhận xóa"}
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
     </div>
