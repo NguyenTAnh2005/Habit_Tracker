@@ -1,6 +1,10 @@
 import { useEffect, useState } from 'react';
-import { Plus, Search, Filter, Pencil, Trash2, CalendarDays, Flame, History } from 'lucide-react';
+import { 
+  Plus, Search, Filter, Pencil, Trash2, CalendarDays, 
+  Flame, History, X, Eye, EyeOff, Lock 
+} from 'lucide-react';
 import habitApi from '../api/habitAPI';
+import userApi from '../api/userAPI'; // 👈 Thêm userApi để xác thực
 import CreateHabitModal from '../components/CreateHabitModal';
 import HabitHistoryModal from '../components/HabitHistoryModal'; 
 
@@ -16,6 +20,13 @@ const HabitsPage = () => {
   const [editingHabit, setEditingHabit] = useState(null);
   const [historyHabit, setHistoryHabit] = useState(null);
   const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
+
+  // --- STATE CHO LỚP BẢO MẬT XÓA ---
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [habitToDelete, setHabitToDelete] = useState(null);
+  const [verifyPass, setVerifyPass] = useState('');
+  const [verifying, setVerifying] = useState(false);
+  const [showPass, setShowPass] = useState(false);
 
   const fetchData = async () => {
     setLoading(true);
@@ -48,9 +59,32 @@ const HabitsPage = () => {
     return () => clearTimeout(timer);
   }, [search, selectedCat]);
 
-  const handleDelete = async (id) => {
-    if (window.confirm("Bạn chắc chắn muốn xóa? Toàn bộ lịch sử của thói quen này sẽ mất!")) {
-      try { await habitApi.deleteHabit(id); fetchData(); } catch (e) { alert("Xóa thất bại"); }
+  // 1. Khi bấm nút Xóa -> Hiện Modal xác nhận mật khẩu
+  const handleDeleteClick = (habit) => {
+    setHabitToDelete(habit);
+    setVerifyPass('');
+    setShowPass(false);
+    setShowDeleteModal(true);
+  };
+
+  // 2. Xử lý xác nhận xóa sau khi nhập pass
+  const handleConfirmDelete = async (e) => {
+    e.preventDefault();
+    setVerifying(true);
+    try {
+      // Bước 1: Xác thực mật khẩu
+      await userApi.verifyPassword(verifyPass);
+      
+      // Bước 2: Nếu pass đúng -> Xóa habit
+      await habitApi.deleteHabit(habitToDelete.id);
+      
+      alert("✅ Đã xóa thói quen thành công!");
+      setShowDeleteModal(false);
+      fetchData();
+    } catch (error) {
+      alert("❌ Mật khẩu không chính xác hoặc lỗi hệ thống!");
+    } finally {
+      setVerifying(false);
     }
   };
 
@@ -112,7 +146,8 @@ const HabitsPage = () => {
                     <History size={16}/>
                   </button>
                   <button onClick={() => openEdit(habit)} className="p-1.5 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded"><Pencil size={16}/></button>
-                  <button onClick={() => handleDelete(habit.id)} className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded"><Trash2 size={16}/></button>
+                  {/* 👇 SỬA HÀM ONCLICK */}
+                  <button onClick={() => handleDeleteClick(habit)} className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded"><Trash2 size={16}/></button>
                 </div>
               </div>
               
@@ -135,6 +170,49 @@ const HabitsPage = () => {
 
       <CreateHabitModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onSuccess={fetchData} habitToEdit={editingHabit} />
       <HabitHistoryModal isOpen={isHistoryModalOpen} onClose={() => setIsHistoryModalOpen(false)} habit={historyHabit} />
+
+      {/* 👇 MODAL XÁC MINH MẬT KHẨU ĐỂ XÓA */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black bg-opacity-50 p-4 backdrop-blur-sm">
+          <div className="bg-white rounded-xl p-6 w-full max-w-sm shadow-2xl animate-in zoom-in duration-200">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-bold text-red-600 flex items-center gap-2">
+                <Lock size={20}/> Xác minh để xóa
+              </h3>
+              <button onClick={() => setShowDeleteModal(false)}><X size={20} className="text-gray-400 hover:text-gray-600"/></button>
+            </div>
+            
+            <p className="text-sm text-gray-600 mb-4">
+                Bạn đang thực hiện xóa thói quen <b>"{habitToDelete?.name}"</b>. <br/>
+                Hành động này sẽ xóa vĩnh viễn toàn bộ lịch sử thói quen. Vui lòng nhập mật khẩu để xác nhận.
+            </p>
+            
+            <form onSubmit={handleConfirmDelete}>
+              <div className="mb-4 relative">
+                  <input 
+                    type={showPass ? "text" : "password"} 
+                    autoFocus required
+                    placeholder="Mật khẩu của bạn..."
+                    className="w-full border border-gray-300 rounded-lg p-2.5 pr-10 focus:ring-2 focus:ring-red-500 outline-none"
+                    value={verifyPass}
+                    onChange={e => setVerifyPass(e.target.value)}
+                  />
+                  <button type="button" onClick={() => setShowPass(!showPass)} className="absolute right-3 top-3 text-gray-400">
+                    {showPass ? <EyeOff size={18}/> : <Eye size={18}/>}
+                  </button>
+              </div>
+              <div className="flex gap-3">
+                <button type="button" onClick={() => setShowDeleteModal(false)} className="flex-1 bg-gray-100 text-gray-600 py-2.5 rounded-lg font-bold hover:bg-gray-200 transition">
+                    Hủy bỏ
+                </button>
+                <button type="submit" disabled={verifying} className="flex-1 bg-red-600 text-white py-2.5 rounded-lg font-bold hover:bg-red-700 transition flex justify-center items-center gap-2">
+                    {verifying ? "Đang xóa..." : "Xác nhận xóa"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

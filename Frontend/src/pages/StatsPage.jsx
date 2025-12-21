@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, 
-  PieChart, Pie, Cell, Legend 
+  PieChart, Pie, Cell, Legend, Label
 } from 'recharts';
 import { Calendar, Filter, PieChart as PieChartIcon, Activity } from 'lucide-react';
 import habitApi from '../api/habitAPI';
@@ -17,6 +17,7 @@ const StatsPage = () => {
   const [heatmapData, setHeatmapData] = useState([]);
   const [selectedDate, setSelectedDate] = useState(new Date()); 
   const [loading, setLoading] = useState(true);
+  const [totalLogs, setTotalLogs] = useState(0);
 
   useEffect(() => {
     const fetchAllStats = async () => {
@@ -58,6 +59,7 @@ const StatsPage = () => {
 
   const processChartData = (data, startDate, daysInMonth) => {
     const statsMap = {};
+    // Khởi tạo map cho từng ngày trong tháng
     for (let i = 0; i < daysInMonth; i++) {
       const d = new Date(startDate);
       d.setDate(d.getDate() + i);
@@ -69,18 +71,29 @@ const StatsPage = () => {
 
     let countCompleted = 0, countPartial = 0, countSkipped = 0, countFailed = 0;
 
+    // Duyệt qua dữ liệu từ API để đếm
     data.forEach(log => {
       const dateKey = log.record_date;
+      
+      // Đếm tổng quát cho biểu đồ tròn (Pie/Donut)
       if (log.status === 'COMPLETED') countCompleted++;
       else if (log.status === 'PARTIAL') countPartial++;
       else if (log.status === 'SKIPPED') countSkipped++;
       else countFailed++;
 
+      // Đếm chi tiết theo ngày cho biểu đồ cột (Bar Chart)
       if (statsMap[dateKey]) {
         if (log.status === 'COMPLETED') statsMap[dateKey].completed += 1;
         if (log.status === 'PARTIAL') statsMap[dateKey].partial += 1;
       }
     });
+
+    // =========================================================
+    // 👇 ĐÂY LÀ CHỖ MỚI: TÍNH TỔNG VÀ LƯU VÀO STATE
+    // =========================================================
+    const total = countCompleted + countPartial + countSkipped + countFailed;
+    setTotalLogs(total); 
+    // =========================================================
 
     setChartData(Object.values(statsMap));
 
@@ -98,6 +111,11 @@ const StatsPage = () => {
         const [y, m] = e.target.value.split('-');
         setSelectedDate(new Date(parseInt(y), parseInt(m) - 1, 1));
     }
+  };
+
+    // Hàm để hiển thị nhãn % bên ngoài biểu đồ
+  const renderCustomizedLabel = ({ name, percent }) => {
+    return `${name} ${(percent * 100).toFixed(0)}%`;
   };
 
   const heatmapStart = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1);
@@ -180,30 +198,50 @@ const StatsPage = () => {
           <h3 className="text-lg font-bold text-gray-800 mb-6 flex items-center gap-2">
             <Filter size={20} className="text-orange-500"/> Tỉ lệ trong tháng
           </h3>
-          <div className="h-64 relative">
+          <div className="h-80 relative"> {/* Tăng chiều cao lên một chút để không bị đè nhãn */}
             {pieData.length === 0 ? (
-                <div className="absolute inset-0 flex items-center justify-center text-gray-400">Chưa có dữ liệu</div>
+              <div className="absolute inset-0 flex items-center justify-center text-gray-400">Chưa có dữ liệu</div>
             ) : (
-                <ResponsiveContainer width="100%" height="100%">
+              <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
-                    <Pie
-                      data={pieData} cx="50%" cy="50%"
-                      innerRadius={60} outerRadius={80}
-                      paddingAngle={5} dataKey="value"
-                    >
+                  <Pie
+                    data={pieData}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={70} // Tăng lỗ ở giữa
+                    outerRadius={90}
+                    paddingAngle={5}
+                    dataKey="value"
+                    label={renderCustomizedLabel} // Hiển thị % bên ngoài
+                    labelLine={true} // Vẽ đường dẫn từ biểu đồ ra chữ
+                  >
                     {pieData.map((entry, index) => {
-                        let color = '#9CA3AF'; 
-                        if (entry.name === 'Hoàn thành') color = '#10B981';
-                        else if (entry.name === 'Một phần') color = '#3B82F6';
-                        else if (entry.name === 'Bỏ qua') color = '#F59E0B';
-                        else if (entry.name === 'Thất bại') color = '#EF4444';
-                        return <Cell key={`cell-${index}`} fill={color} />;
+                      let color = '#9CA3AF';
+                      if (entry.name === 'Hoàn thành') color = '#10B981';
+                      else if (entry.name === 'Một phần') color = '#3B82F6';
+                      else if (entry.name === 'Bỏ qua') color = '#F59E0B';
+                      else if (entry.name === 'Thất bại') color = '#EF4444';
+                      return <Cell key={`cell-${index}`} fill={color} stroke="none" />;
                     })}
-                    </Pie>
-                    <RechartsTooltip />
-                    <Legend verticalAlign="bottom" height={36}/>
+                    
+                    {/* 👇 HIỂN THỊ SỐ LƯỢNG Ở TRUNG TÂM */}
+                    <Label 
+                      value={`${totalLogs}`} 
+                      position="center" 
+                      className="text-2xl font-bold fill-gray-800"
+                      dy={-10} // Đẩy lên trên một chút
+                    />
+                    <Label 
+                      value="Nhật ký" 
+                      position="center" 
+                      className="text-xs fill-gray-400 font-medium"
+                      dy={15} // Đẩy xuống dưới một chút
+                    />
+                  </Pie>
+                  <RechartsTooltip />
+                  <Legend verticalAlign="bottom" height={36} iconType="circle" />
                 </PieChart>
-                </ResponsiveContainer>
+              </ResponsiveContainer>
             )}
           </div>
         </div>
