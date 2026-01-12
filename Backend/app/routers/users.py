@@ -300,3 +300,26 @@ def forgot_password(
     background_tasks.add_task(send_email_background, user.email, subject, body)
 
     return {"message": "Mật khẩu mới đã được gửi vào email của bạn. Vui lòng kiểm tra!"}
+
+# Một API khẩn cấp cập nhật mật khẩu mới cho tài khoàn nào đó với quyền Admin, do Mail sever bị lỗi không gửi được mail khi deploy 
+@router.post("/admin/reset_password/")
+def update_password_by_admin_new(
+    req: schemas.ForgotPasswordRequest,
+    db: Session = Depends(db_connection.get_db),
+    current_user: models.User = Depends(get_admin_user)
+):
+     # 1. Tìm user
+    user = crud_user.get_user_by_email(db, req.email)
+    if not user:
+        # Để bảo mật, dù không tìm thấy email cũng nên báo thành công giả 
+        # hoặc báo lỗi tùy bạn. Ở đây mình báo lỗi cho dễ test.
+        raise HTTPException(status_code=404, detail="Email không tồn tại trong hệ thống.")
+
+    # 2. Tạo mật khẩu mới
+    new_raw_password = generate_random_password(8) # Ví dụ: aX9d2LmP
+    
+    # 3. Lưu vào DB (Nhớ Hash nhé!)
+    user.password = get_password_hash(new_raw_password)
+    db.commit()
+
+    return {"message": f"Mật khẩu mới của user {user.username} là: {new_raw_password}"}
