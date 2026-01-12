@@ -41,10 +41,10 @@ const ForgotPasswordPage = () => {
           <p className="text-gray-500 mt-2 text-sm">
             Nhập email đã đăng ký của bạn. Chúng tôi sẽ gửi cho bạn một mật khẩu mới.
           </p>
-          <h1 className="text-xl font-bold text-red-500">
+          <h3 className="text-xl font-bold text-red-500">
             Chức năng đang bị lỗi nghiêm trọng, không thể gửi mail. Chúng tôi đang nghiên cứu thêm giải pháp.
-            Liên hệ Zalo: 032 888 4320 để được hỗ trợ cấp mật khẩu!
-          </h1>
+            Liên hệ Zalo: 032 888 4320 hoặc email 23050118@student.bdu.edu.vn để được hỗ trợ cấp mật khẩu!
+          </h3>
         </div>
 
         {/* Thông báo lỗi/thành công */}
