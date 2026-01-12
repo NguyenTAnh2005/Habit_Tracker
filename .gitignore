@@ -1,0 +1,30 @@
+# --- CHUNG (Toàn bộ dự án) ---
+.DS_Store
+.vscode/
+.idea/
+*.log
+
+# --- BACKEND (Python/FastAPI) ---
+Backend/__pycache__/
+Backend/*.pyc
+Backend/venv/
+Backend/.env
+Backend/.pytest_cache/
+
+# --- FRONTEND (ReactJS) ---
+# Thư mục nặng nhất quả đất - TUYỆT ĐỐI KHÔNG UP
+Frontend/node_modules/
+
+# Thư mục build ra sản phẩm (không cần up code nguồn)
+Frontend/build/
+Frontend/dist/
+
+# File biến môi trường local của React
+Frontend/.env
+Frontend/.env.local
+Frontend/.env.development.local
+Frontend/.env.test.local
+Frontend/.env.production.local
+Frontend/npm-debug.log*
+Frontend/yarn-debug.log*
+Frontend/yarn-error.log*
