@@ -15,14 +15,14 @@ const ForgotPasswordPage = () => {
 
     try {
       await userApi.forgotPassword(email);
-      setMessage({ 
-        type: 'success', 
-        content: '✅ Thành công! Mật khẩu mới đã được gửi vào email của bạn. Hãy kiểm tra cả hộp thư Spam nhé.' 
+      setMessage({
+        type: 'success',
+        content: '✅ Thành công! Mật khẩu mới đã được gửi vào email của bạn. Hãy kiểm tra cả hộp thư Spam nhé.'
       });
     } catch (error) {
-      setMessage({ 
-        type: 'error', 
-        content: '❌ Thất bại: ' + (error.response?.data?.detail || 'Lỗi kết nối server.') 
+      setMessage({
+        type: 'error',
+        content: '❌ Thất bại: ' + (error.response?.data?.detail || 'Lỗi kết nối server.')
       });
     } finally {
       setLoading(false);
@@ -32,7 +32,7 @@ const ForgotPasswordPage = () => {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
       <div className="w-full max-w-md bg-white rounded-2xl shadow-xl p-8 animate-in fade-in zoom-in duration-300">
-        
+
         <div className="text-center mb-8">
           <div className="mx-auto bg-indigo-100 w-16 h-16 rounded-full flex items-center justify-center mb-4">
             <Mail size={32} className="text-indigo-600" />
@@ -41,13 +41,16 @@ const ForgotPasswordPage = () => {
           <p className="text-gray-500 mt-2 text-sm">
             Nhập email đã đăng ký của bạn. Chúng tôi sẽ gửi cho bạn một mật khẩu mới.
           </p>
+          <h1 className="text-xl font-bold text-red-500">
+            Chức năng đang bị lỗi nghiêm trọng, không thể gửi mail. Chúng tôi đang nghiên cứu thêm giải pháp.
+            Liên hệ Zalo: 032 888 4320 để được hỗ trợ cấp mật khẩu!
+          </h1>
         </div>
 
         {/* Thông báo lỗi/thành công */}
         {message.content && (
-          <div className={`mb-6 p-4 rounded-lg text-sm border ${
-            message.type === 'success' ? 'bg-green-50 text-green-700 border-green-200' : 'bg-red-50 text-red-700 border-red-200'
-          }`}>
+          <div className={`mb-6 p-4 rounded-lg text-sm border ${message.type === 'success' ? 'bg-green-50 text-green-700 border-green-200' : 'bg-red-50 text-red-700 border-red-200'
+            }`}>
             {message.content}
           </div>
         )}
