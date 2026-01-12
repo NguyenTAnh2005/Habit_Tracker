@@ -65,6 +65,7 @@ def generate_random_password(length=8):
 # app/core/utils.py
 
 def send_email_background(to_email: str, subject: str, body: str):
+    print(f"DEBUG: Đang kết nối tới {settings.MAIL_SERVER} bằng Port {settings.MAIL_PORT}")
     try:
         msg = MIMEMultipart()
         msg['From'] = settings.MAIL_FROM
