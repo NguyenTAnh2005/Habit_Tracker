@@ -25,7 +25,7 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 20160
 
     # 
-    RECOVERY_KEY_ADMIN: str
+    #RECOVERY_KEY_ADMIN: str
 
     
 
