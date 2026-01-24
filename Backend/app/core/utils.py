@@ -1,7 +1,6 @@
 from passlib.context import CryptContext
 from datetime import datetime, timedelta, timezone
 from jose import jwt
-from passlib.context import CryptContext
 from typing import Optional
 from app.core.config import settings 
 import random
@@ -43,12 +42,12 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     if expires_delta:
         expire = datetime.now(timezone.utc) + expires_delta
     else:
-        # 👇 SỬA Ở ĐÂY: Lấy tham số từ settings
+        #  Lấy tham số từ settings
         expire = datetime.now(timezone.utc) + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     
     to_encode.update({"exp": expire})
     
-    # 👇 SỬA Ở ĐÂY: Lấy SECRET_KEY từ settings
+    #  Lấy SECRET_KEY từ settings
     encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=ALGORITHM)
     
     return encoded_jwt

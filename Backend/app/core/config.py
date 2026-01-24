@@ -1,4 +1,3 @@
-import os
 from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
@@ -8,21 +7,27 @@ class Settings(BaseSettings):
     # Giá trị sau dấu = là GIÁ TRỊ MẶC ĐỊNH (dùng khi không tìm thấy biến môi trường)
     # Khi deploy, bạn chỉ cần set biến môi trường trên server là nó tự nhận, không cần sửa code.
     
-    FRONTEND_URL: str = "http://localhost:5173"
+    FRONTEND_URL: str 
     
     # Lưu ý: Đây là DB local, khi deploy nhớ set biến DATABASE_URL trên server trỏ về DB thật
     DATABASE_URL: str = "postgresql://postgres:ntaPGSQL2005@localhost/habit_tracker_db"
     
-    SECRET_KEY: str = "TuanAnh_Sang_2024_Habit_Tracker_Project_Dev_Secret_Key"
+    SECRET_KEY: str 
 
     MAIL_USERNAME: str = "23050118@student.bdu.edu.vn"
-    MAIL_PASSWORD: str = "wllo hkgr sfnl ydwu"
+    MAIL_PASSWORD: str 
     MAIL_FROM: str = "23050118@student.bdu.edu.vn"
     MAIL_PORT: int = 587
     MAIL_SERVER: str = "smtp.gmail.com"
 
+
     # 60 phút * 24 giờ * 14 ngày = 20160 phút
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 20160
+
+    # 
+    RECOVERY_KEY_ADMIN: str
+
+    
 
     class Config:
         # Chỉ định file chứa biến môi trường (dành cho môi trường Dev Local)

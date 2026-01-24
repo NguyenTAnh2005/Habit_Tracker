@@ -28,15 +28,12 @@ def calculate_current_streak(logs: List[models.HabitLog]) -> int:
     # Check ngày bắt đầu: Nếu log mới nhất cách xa quá 2 ngày -> Reset về 0
     if not dates or dates[0] < yesterday:
         return 0
-
     streak = 0
     check_date = dates[0] # Bắt đầu từ ngày log mới nhất
-    
     for d in dates:
         # Nếu ngày đang xét bị đứt quãng so với ngày mong đợi -> Dừng
         if d != check_date:
             break
-            
         status = day_map[d]
         
         # --- LOGIC CỐT LÕI ---
@@ -46,8 +43,6 @@ def calculate_current_streak(logs: List[models.HabitLog]) -> int:
             pass         # Cầu nối: Không cộng, nhưng không break loop
         else: 
             break        # FAILED -> Gãy chuỗi
-            
         # Lùi ngày kiểm tra về quá khứ
         check_date = check_date - timedelta(days=1)
-            
     return streak

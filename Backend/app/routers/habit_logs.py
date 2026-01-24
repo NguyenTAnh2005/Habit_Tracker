@@ -432,9 +432,7 @@ def get_monthly_heatmap_stats(
             "rate": rate,
             "level": level
         })
-
         current += timedelta(days=1)
-        
     return heatmap_data
         
             
