@@ -1,3 +1,5 @@
+#📅 Developed during Semester 1 of my third year at university.
+
 # 📌 Habit Tracker – Ứng dụng theo dõi thói quen
 
 ## 📖 Giới thiệu
